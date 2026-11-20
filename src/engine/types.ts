@@ -22,11 +22,22 @@ export const KIND_LABEL: Record<SceneKind, string> = {
   abstract: 'Kali Fractal',
 };
 
+/** center: the image replaces the eye; background: the image is the backdrop */
+export type ImageMode = 'center' | 'background';
+
+export interface SceneImage {
+  id: string; // key in the browser image store (IndexedDB)
+  mode: ImageMode;
+}
+
 export interface Scene {
   id: string;
   name: string;
   kind: SceneKind;
   params: ParamValues;
+  image?: SceneImage;
+  /** Claude's explanation of how it tuned the scene for the image */
+  aiNote?: string;
 }
 
 export const TRANSITIONS = [
@@ -55,6 +66,7 @@ export interface SceneRender {
   params: ParamValues;
   /** per-scene seed so duplicated scenes can diverge */
   seed: number;
+  image?: SceneImage | null;
 }
 
 /**

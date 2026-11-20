@@ -82,6 +82,9 @@ export interface AppState {
     rxCount: number;
   };
   thumbs: Record<string, string>;
+  /** scene ids currently being analysed by Claude */
+  aiBusy: string[];
+  aiError: { sceneId: string; message: string } | null;
   outputWindow: boolean;
   engineError: string | null;
 }
@@ -137,6 +140,8 @@ export function initialState(): AppState {
       rxCount: 0,
     },
     thumbs: {},
+    aiBusy: [],
+    aiError: null,
     outputWindow: false,
     engineError: null,
   };

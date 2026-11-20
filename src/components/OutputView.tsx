@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { type EngineFrame } from '@/engine/types';
 import { VisualEngine } from '@/engine/VisualEngine';
+import { loadImageElement } from '@/lib/imageStore';
 import { OUTPUT_CHANNEL } from '@/engine/types';
 
 /**
@@ -28,10 +29,22 @@ export default function OutputView() {
     const ch = new BroadcastChannel(OUTPUT_CHANNEL);
     let frame: EngineFrame | null = null;
     let lastAt = 0;
+    const requested = new Map<string, number>();
+    const need = (id: string) => {
+      const t = requested.get(id) ?? 0;
+      if (engine.hasImage(id) || performance.now() - t < 2000) return;
+      requested.set(id, performance.now());
+      ch.postMessage({ type: 'output-need-image', id });
+    };
     ch.onmessage = (e) => {
       if (e.data?.type === 'frame') {
         frame = e.data.frame;
         lastAt = performance.now();
+        if (frame?.a.image) need(frame.a.image.id);
+        if (frame?.b?.image && frame.mix > 0) need(frame.b.image.id);
+      } else if (e.data?.type === 'image') {
+        const id = String(e.data.id);
+        loadImageElement(e.data.dataUrl).then((img) => engine.setImage(id, img)).catch(() => {});
       }
     };
     const hello = () => ch.postMessage({ type: 'output-hello' });

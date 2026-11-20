@@ -59,6 +59,7 @@ export class VisualEngine {
   private thumbOut: Target;
   private black: Target;
   private paramBuf = new Float32Array(PARAMS.length);
+  private images = new Map<string, { tex: WebGLTexture; aspect: number }>();
   private pixelBuf = new Uint8Array(MON_W * MON_H * 4);
   private floatFb: boolean;
   private iw = 0;
@@ -102,7 +103,9 @@ export class VisualEngine {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     this.vao = vao;
 
-    this.scene = this.program(SCENE_FRAG, ['uRes', 'uTime', 'uPulse', 'uSeed', 'uKind', 'uP']);
+    this.scene = this.program(SCENE_FRAG, [
+      'uRes', 'uTime', 'uPulse', 'uSeed', 'uKind', 'uP', 'uImg', 'uImgMode', 'uImgAspect',
+    ]);
     this.trans = this.program(TRANSITION_FRAG, [
       'uA', 'uB', 'uPrev', 'uMix', 'uIntensity', 'uType', 'uTime', 'uRes',
     ]);
@@ -241,7 +244,43 @@ export class VisualEngine {
     gl.uniform1f(u.uSeed, s.seed);
     gl.uniform1i(u.uKind, Math.max(0, SCENE_KINDS.indexOf(s.kind)));
     gl.uniform1fv(u.uP, packParams(s.params, this.paramBuf));
+    const img = s.image ? this.images.get(s.image.id) : undefined;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, img ? img.tex : this.black.tex);
+    gl.uniform1i(u.uImg, 3);
+    gl.uniform1i(u.uImgMode, img && s.image ? (s.image.mode === 'center' ? 1 : 2) : 0);
+    gl.uniform1f(u.uImgAspect, img ? img.aspect : 1);
     this.draw(dst);
+  }
+
+  /** Upload (or replace) an image texture referenced by SceneImage.id */
+  setImage(id: string, source: TexImageSource & { width: number; height: number }) {
+    const gl = this.gl;
+    let entry = this.images.get(id);
+    if (!entry) {
+      entry = { tex: gl.createTexture()!, aspect: 1 };
+      this.images.set(id, entry);
+    }
+    entry.aspect = source.width / Math.max(1, source.height);
+    gl.bindTexture(gl.TEXTURE_2D, entry.tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+  }
+
+  hasImage(id: string) {
+    return this.images.has(id);
+  }
+
+  removeImage(id: string) {
+    const e = this.images.get(id);
+    if (e) this.gl.deleteTexture(e.tex);
+    this.images.delete(id);
   }
 
   private renderPost(src: Target, prev: Target, dst: Target, params: Record<string, number>, time: number) {

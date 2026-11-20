@@ -1,6 +1,7 @@
 import { clampParam, PARAM_BY_KEY } from '@/engine/params';
 import { KIND_PRESETS, uid } from '@/engine/presets';
-import type { Scene, SceneKind, TransitionType } from '@/engine/types';
+import { SCENE_KINDS, type ImageMode, type Scene, type SceneKind, type TransitionType } from '@/engine/types';
+import { deleteImage, fileToDataUrl, getImage, putImage } from '@/lib/imageStore';
 import { live, store, type AppState, type AudioChannelCfg, type MidiMapping } from './appState';
 
 /* ------------------------------------------------------------------ events
@@ -54,6 +55,7 @@ export function duplicateScene(id: string) {
 
 export function deleteScene(id: string) {
   const st = S();
+  const imgId = st.scenes.find((x) => x.id === id)?.image?.id;
   if (st.scenes.length <= 2) return; // A and B always need a scene
   if (st.transitioning && (id === st.slotA || id === st.slotB)) return;
   const scenes = st.scenes.filter((s) => s.id !== id);
@@ -68,6 +70,7 @@ export function deleteScene(id: string) {
   delete thumbs[id];
   patch.thumbs = thumbs;
   store.set(patch);
+  if (imgId) releaseImage(imgId);
 }
 
 export function renameScene(id: string, name: string) {
@@ -119,6 +122,97 @@ export function editTargetSceneId() {
 
 export function setEditTarget(t: 'A' | 'B') {
   store.set({ editTarget: t });
+}
+
+/* ------------------------------------------------------------------ images + AI */
+function releaseImage(imgId: string) {
+  if (!S().scenes.some((x) => x.image?.id === imgId)) deleteImage(imgId).catch(() => {});
+}
+
+function patchScene(id: string, p: Partial<Scene>) {
+  store.set((s) => ({ scenes: s.scenes.map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+}
+
+function nameFromFile(file: File) {
+  const base = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  return (base || 'IMAGE').toUpperCase().slice(0, 24);
+}
+
+/** New scene built around an uploaded image; Claude then tunes it. */
+export async function createSceneFromImage(file: File, autoTune = true) {
+  const dataUrl = await fileToDataUrl(file);
+  const imgId = 'img-' + uid();
+  await putImage(imgId, dataUrl);
+  const id = uid();
+  const scene: Scene = {
+    id,
+    name: nameFromFile(file),
+    kind: 'eye',
+    params: { ...KIND_PRESETS.eye, eyeSize: 0.62 },
+    image: { id: imgId, mode: 'center' },
+  };
+  store.set((s) => ({ scenes: [...s.scenes, scene], selectedId: id }));
+  if (!S().transitioning && S().slotA !== id) store.set({ slotB: id, editTarget: 'B' });
+  if (autoTune) await aiTune(id);
+  return id;
+}
+
+/** Replace (or add) the image of an existing scene. */
+export async function setSceneImage(sceneId: string, file: File, autoTune = false) {
+  const dataUrl = await fileToDataUrl(file);
+  const imgId = 'img-' + uid();
+  await putImage(imgId, dataUrl);
+  const old = S().scenes.find((x) => x.id === sceneId)?.image;
+  patchScene(sceneId, { image: { id: imgId, mode: old?.mode ?? 'center' } });
+  if (old) releaseImage(old.id);
+  if (autoTune) await aiTune(sceneId);
+}
+
+export function setImageMode(sceneId: string, mode: ImageMode) {
+  const img = S().scenes.find((x) => x.id === sceneId)?.image;
+  if (img) patchScene(sceneId, { image: { ...img, mode } });
+}
+
+export function removeSceneImage(sceneId: string) {
+  const img = S().scenes.find((x) => x.id === sceneId)?.image;
+  if (!img) return;
+  patchScene(sceneId, { image: undefined, aiNote: undefined });
+  releaseImage(img.id);
+}
+
+/** Ask Claude (server route /api/analyze) to design the scene around its image. */
+export async function aiTune(sceneId: string, hint?: string) {
+  const sc = S().scenes.find((x) => x.id === sceneId);
+  if (!sc?.image || S().aiBusy.includes(sceneId)) return;
+  store.set((s) => ({ aiBusy: [...s.aiBusy, sceneId], aiError: null }));
+  try {
+    const image = await getImage(sc.image.id);
+    if (!image) throw new Error('Image not found in this browser.');
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image, hint }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Analysis failed (${res.status}).`);
+    const cur = S().scenes.find((x) => x.id === sceneId);
+    if (!cur?.image) return;
+    patchScene(sceneId, {
+      name: typeof data.name === 'string' && data.name ? data.name : cur.name,
+      kind: SCENE_KINDS.includes(data.kind) ? data.kind : cur.kind,
+      params: { ...cur.params, ...data.params },
+      image: { ...cur.image, mode: data.imageMode === 'background' ? 'background' : 'center' },
+      aiNote: typeof data.note === 'string' ? data.note : undefined,
+    });
+  } catch (e) {
+    store.set({ aiError: { sceneId, message: (e as Error).message } });
+  } finally {
+    store.set((s) => ({ aiBusy: s.aiBusy.filter((x) => x !== sceneId) }));
+  }
+}
+
+export function clearAiError() {
+  store.set({ aiError: null });
 }
 
 /* ------------------------------------------------------------------ A / B */

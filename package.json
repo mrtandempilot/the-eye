@@ -11,9 +11,11 @@
     "bridge": "node bridge/eye-bridge.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.11.0",
     "next": "15.5.29",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.18",

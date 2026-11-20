@@ -15,7 +15,8 @@ export type ParamGroupId =
   | 'color'
   | 'glow'
   | 'rotation'
-  | 'scale';
+  | 'scale'
+  | 'image';
 
 export interface ParamDef {
   key: string;
@@ -40,6 +41,7 @@ export const PARAM_GROUPS: { id: ParamGroupId; label: string; short: string }[] 
   { id: 'glow', label: 'Glow', short: 'GLW' },
   { id: 'rotation', label: 'Rotation', short: 'ROT' },
   { id: 'scale', label: 'Scale', short: 'SCL' },
+  { id: 'image', label: 'Image Layer', short: 'IMG' },
 ];
 
 export const PARAMS: ParamDef[] = [
@@ -91,6 +93,11 @@ export const PARAMS: ParamDef[] = [
   // Scale
   { key: 'zoom', label: 'Zoom', group: 'scale', min: 0.3, max: 3, def: 1.0, step: 0.01 },
   { key: 'pulse', label: 'Beat Pulse', group: 'scale', min: 0, max: 1, def: 0.25 },
+  // Image layer (only active when the scene has an image)
+  { key: 'imgMix', label: 'Mix', group: 'image', min: 0, max: 1, def: 1 },
+  { key: 'imgZoom', label: 'Zoom', group: 'image', min: 0.3, max: 3, def: 1, step: 0.01 },
+  { key: 'imgWarp', label: 'Warp', group: 'image', min: 0, max: 1, def: 0.4 },
+  { key: 'imgEdge', label: 'Edge Morph', group: 'image', min: 0, max: 1, def: 0.35 },
 ];
 
 export type ParamKey = (typeof PARAMS)[number]['key'];

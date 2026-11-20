@@ -106,3 +106,4 @@ button:focus-visible, [role="slider"]:focus-visible { outline: 2px solid var(--c
   }
   .a-scenes { position: sticky; top: 10px; align-self: start; max-height: calc(100dvh - 20px); }
 }
+@keyframes aiBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }

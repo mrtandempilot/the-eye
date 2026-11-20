@@ -46,6 +46,9 @@ uniform float uPulse;
 uniform float uSeed;
 uniform int uKind;
 uniform float uP[NP];
+uniform sampler2D uImg;
+uniform int uImgMode;      // 0 none, 1 center (replaces the eye), 2 background
+uniform float uImgAspect;  // image width / height
 in vec2 vUv;
 out vec4 fragColor;
 ${COMMON}
@@ -405,6 +408,14 @@ void main(){
   else if(uKind==5) col = bgVortex(uvB, t);
   else col = bgAbstract(uvB, t);
 
+  // image as backdrop: cover-fit, liquid-warped, gently rotating
+  if(uImgMode==2){
+    vec2 ip = (uv + w*P_imgWarp*0.7)*rot(t*P_rotSpeed*0.35 + P_rotTwist*1.5*length(uv));
+    float H = max(1.0, (uRes.x/uRes.y)/uImgAspect);
+    vec3 ic = texture(uImg, ip/(vec2(uImgAspect,1.0)*H*max(P_imgZoom,0.05)) + 0.5).rgb;
+    col = mix(col, ic, P_imgMix);
+  }
+
   if(P_fractal > 0.01 && uKind != 6) col += kali(uvB, t, 7, 1.6)*P_fractal*1.6*smoothstep(0.1,0.6,length(uvB));
   if(P_sfAmount > 0.01 && uKind != 1 && uKind != 4) col += sfRings(uvB, t)*P_sfAmount;
   if(P_partAmount > 0.01) col += particles(uvB, t)*mix(0.4, 1.4, P_partAmount);
@@ -412,11 +423,27 @@ void main(){
   float eyeS = mix(0.06, 0.42, P_eyeSize);
   vec4 tn = tentacles(uv*rot(t*P_rotSpeed*0.25) + w*P_liquid*0.2, t, eyeS);
   col = mix(col, tn.rgb, tn.a);
-  if(P_eyeSize > 0.01){
+  if(P_eyeSize > 0.01 && !(uImgMode==1 && P_imgMix > 0.995)){
     vec4 ey = eyeLayer(uvE, t, eyeS);
     // aura behind the eye
     col += vec3(.35,.2,.9)*exp(-length(uvE/eyeS*vec2(0.8,1.3))*2.2)*0.25*(1.0-ey.a);
     col = mix(col, ey.rgb, ey.a);
+  }
+
+  // image in the centre, in place of the eye: superformula-edged, breathing with the beat
+  if(uImgMode==1){
+    float R = eyeS*(1.0 + 0.06*uPulse*P_pulse);
+    vec2 q = (uvE + w*P_imgWarp*0.18)/R;
+    float a = atan(q.y,q.x);
+    float d = length(q) - mix(1.0, sfNorm(a + t*0.08), P_imgEdge*0.45);
+    float aa = 3.0/(uRes.y*R);
+    float m = smoothstep(aa, -aa, d);
+    vec2 size = vec2(uImgAspect,1.0)*max(1.0, 1.0/uImgAspect)*2.0;
+    vec2 qi = q + w*P_imgWarp*0.6*smoothstep(-0.6, 0.0, d);
+    vec3 ic = texture(uImg, qi/(size*max(P_imgZoom,0.05)) + 0.5).rgb;
+    col += vec3(.35,.2,.9)*exp(-max(d,0.0)*3.0)*0.35*(1.0-m);
+    col = mix(col, ic, m*P_imgMix);
+    col += vec3(.45,.3,1.)*smoothstep(0.08, 0.0, abs(d))*(0.35 + 0.5*uPulse)*P_imgMix;
   }
 
   col = hueShift(col, P_hue + P_colorCycle*0.35*sin(t*0.07));

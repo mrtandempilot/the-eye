@@ -5,6 +5,7 @@ import { VisualEngine } from '@/engine/VisualEngine';
 import { AudioEngine } from '@/io/audio';
 import { TouchDesignerLink } from '@/io/bridge';
 import { MidiManager } from '@/io/midi';
+import { getImage, loadImageElement } from '@/lib/imageStore';
 import { onPerfEvent, stepTransition, take } from './actions';
 import { live, store, type AppState } from './appState';
 
@@ -43,6 +44,7 @@ export class PerformanceRuntime {
     }
     store.get().scenes.forEach((s) => this.thumbQueue.add(s.id));
     this.flushThumbs();
+    this.syncImages();
   }
 
   private started = false;
@@ -56,6 +58,7 @@ export class PerformanceRuntime {
       this.channel.onmessage = (e) => {
         if (e.data?.type === 'output-hello') store.set({ outputWindow: true });
         if (e.data?.type === 'output-bye') store.set({ outputWindow: false });
+        if (e.data?.type === 'output-need-image') this.sendImage(String(e.data.id));
       };
     }
     this.td.onAudio = (levels) => {
@@ -79,7 +82,37 @@ export class PerformanceRuntime {
     this.raf = requestAnimationFrame(loop);
   }
 
+  private loadingImages = new Set<string>();
+  private imageData = new Map<string, string>();
+
+  /** Make sure every scene image is uploaded to the engine as a texture. */
+  private syncImages() {
+    for (const sc of store.get().scenes) {
+      const id = sc.image?.id;
+      if (!id || !this.engine || this.engine.hasImage(id) || this.loadingImages.has(id)) continue;
+      this.loadingImages.add(id);
+      getImage(id)
+        .then(async (url) => {
+          if (!url || !this.engine) return;
+          const img = await loadImageElement(url);
+          this.engine.setImage(id, img);
+          this.imageData.set(id, url);
+          // refresh thumbnails of scenes using it
+          store.get().scenes.forEach((x) => x.image?.id === id && this.thumbQueue.add(x.id));
+          this.scheduleThumbs();
+        })
+        .catch(() => {})
+        .finally(() => this.loadingImages.delete(id));
+    }
+  }
+
+  private sendImage(id: string) {
+    const url = this.imageData.get(id);
+    if (url) this.channel?.postMessage({ type: 'image', id, dataUrl: url });
+  }
+
   private onStateChange(s: AppState, p: AppState) {
+    if (s.scenes !== p.scenes) this.syncImages();
     if (s.scenes !== p.scenes) {
       const prev = new Map(p.scenes.map((x) => [x.id, x]));
       for (const sc of s.scenes) {
@@ -101,7 +134,7 @@ export class PerformanceRuntime {
     for (const id of this.thumbQueue) {
       const sc = store.get().scenes.find((x) => x.id === id);
       if (!sc) continue;
-      thumbs[id] = this.engine.thumbnail({ kind: sc.kind, params: sc.params, seed: seedFromId(sc.id) });
+      thumbs[id] = this.engine.thumbnail({ kind: sc.kind, params: sc.params, seed: seedFromId(sc.id), image: sc.image ?? null });
     }
     this.thumbQueue.clear();
     store.set({ thumbs });
@@ -192,7 +225,7 @@ export class PerformanceRuntime {
   }
 
   private render(sc: Scene, s: AppState) {
-    return { kind: sc.kind, params: this.modulate(sc.params, s), seed: seedFromId(sc.id) };
+    return { kind: sc.kind, params: this.modulate(sc.params, s), seed: seedFromId(sc.id), image: sc.image ?? null };
   }
 
   setMonitors(a: HTMLCanvasElement | null, b: HTMLCanvasElement | null) {

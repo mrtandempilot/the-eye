@@ -6,6 +6,7 @@ import { cx } from '@/lib/cx';
 import * as A from '@/state/actions';
 import { store } from '@/state/appState';
 import { useStoreSlice } from '@/state/createStore';
+import { ImagePicker } from './ImageControls';
 import { PanelHeader } from './ui/primitives';
 
 function NameEditor({ scene, onDone }: { scene: Scene; onDone: () => void }) {
@@ -61,6 +62,7 @@ function IconBtn({ children, title, onClick, danger, disabled }: { children: Rea
 
 export default function ScenePanel() {
   const s = useStoreSlice(store, (st) => ({
+    aiBusy: st.aiBusy,
     scenes: st.scenes,
     slotA: st.slotA,
     slotB: st.slotB,
@@ -95,6 +97,16 @@ export default function ScenePanel() {
             </button>
             {addOpen && (
               <div className="panel absolute right-0 top-9 z-40 w-52 p-1 shadow-2xl shadow-black/70">
+                <ImagePicker
+                  className="mb-1 block w-full rounded border border-cyan/40 bg-cyan/10 px-2 py-2 text-left text-[12px] font-semibold text-cyan hover:bg-cyan/20"
+                  title="Upload an image; Claude designs a scene around it"
+                  onFile={(f) => {
+                    setAddOpen(false);
+                    A.createSceneFromImage(f);
+                  }}
+                >
+                  ✦ From image (AI)…
+                </ImagePicker>
                 <div className="label px-2 py-1.5">Generator</div>
                 {SCENE_KINDS.map((k) => (
                   <button key={k} type="button" onClick={() => add(k)} className="block w-full rounded px-2 py-1.5 text-left text-[12px] text-dim hover:bg-violet/15 hover:text-text">
@@ -107,11 +119,17 @@ export default function ScenePanel() {
         }
       />
       <div className="label border-b border-line px-3 py-1.5 !text-[9px] !tracking-[.12em]">
-        Click = cue to B · Double-click = take · Drag to reorder
+        Click = cue to B · Double-click = take · Drag to reorder · Drop images to create AI scenes
       </div>
       <ol
         className="scroll-thin flex min-h-0 flex-1 gap-2 overflow-auto p-2 max-wide:flex-row max-wide:overflow-x-auto wide:flex-col"
         onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+          if (!files.length) return;
+          e.preventDefault();
+          files.slice(0, 4).forEach((f) => A.createSceneFromImage(f));
+        }}
       >
         {s.scenes.map((sc, i) => {
           const isA = sc.id === s.slotA;
@@ -163,6 +181,16 @@ export default function ScenePanel() {
                   <div className="h-full w-full animate-pulse bg-gradient-to-br from-violet/20 to-blue/10" />
                 )}
                 <span className="mono absolute left-1 top-1 rounded-[3px] bg-black/70 px-1 text-[9px] text-dim">{String(i + 1).padStart(2, '0')}</span>
+                {sc.image && (
+                  <span className="absolute right-1 top-1 rounded-[3px] bg-black/70 px-1 text-[9px] text-cyan" title={sc.image.mode === 'center' ? 'Image in the centre' : 'Image backdrop'}>
+                    IMG
+                  </span>
+                )}
+                {s.aiBusy.includes(sc.id) && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/60 text-[10px] font-bold tracking-[.14em] text-cyan">
+                    <span className="animate-pulse">✦ AI…</span>
+                  </div>
+                )}
                 {(isA || isB) && (
                   <span className={cx('absolute bottom-1 left-1 rounded-[3px] px-1.5 text-[9px] font-black tracking-[.1em]', isA ? 'bg-tally text-white' : 'bg-cyan text-black')}>
                     {isA ? 'A · LIVE' : 'B · NEXT'}

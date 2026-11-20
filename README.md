@@ -24,6 +24,27 @@ npm run bridge     # optional: WebSocket ⇄ OSC bridge for TouchDesigner / Able
 | Audio in `DEMO` mode | **Simulated** from the BPM clock, and labelled SIMULATED throughout the UI. |
 | TouchDesigner | **Real** WebSocket client. It shows DISCONNECTED and the **DEMO MODE** badge until a server answers. |
 
+## Image scenes tuned by Claude
+
+Use **+ NEW → ✦ From image (AI)**, or drop image files onto the scene library.
+The image becomes a texture layer in the scene. In **CENTER** mode it replaces
+the eye, with a superformula-shaped edge and tentacles behind it. In
+**BACKDROP** mode it fills the screen behind the effects.
+
+Claude (`claude-opus-5-5`, via the server route `src/app/api/analyze/route.ts`)
+looks at the image and picks the generator, the image mode and all of the
+parameters, then explains its choices in a short note. In the effect panel you
+can run **✦ AI TUNE** again with an optional note (for example "darker, slower,
+more tentacles"). You can also replace or remove the image there, and adjust
+the **Image Layer** sliders (mix, zoom, warp, edge morph).
+
+- The route needs **`ANTHROPIC_API_KEY`** in the server environment. On Vercel,
+  add it under Settings → Environment Variables and redeploy. Without it the
+  image still works and only the AI tuning reports that the key is missing.
+- Images are downscaled to 1280 px and kept in this browser's IndexedDB. They
+  are sent to the pop-out output window, but they are not uploaded anywhere
+  except to Claude for analysis.
+
 ## Using it live
 
 - **Scene library**: click a scene to cue it to **B**, double-click to take it at once, and drag to reorder (↑/↓ on touch). Double-click a name to rename. Use **+ NEW** to pick a generator. Each scene has buttons to duplicate and delete it.

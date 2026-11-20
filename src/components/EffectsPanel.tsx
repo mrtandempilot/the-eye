@@ -7,6 +7,7 @@ import { cx } from '@/lib/cx';
 import * as A from '@/state/actions';
 import { store } from '@/state/appState';
 import { useStoreSlice } from '@/state/createStore';
+import ImageControls from './ImageControls';
 import { PanelHeader, Seg, Slider } from './ui/primitives';
 
 const GROUP_ACCENT: Partial<Record<ParamGroupId, 'violet' | 'cyan' | 'blue'>> = {
@@ -71,9 +72,10 @@ export default function EffectsPanel() {
           RESET
         </button>
       </div>
+      <ImageControls scene={sc} />
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-2">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
-          {PARAM_GROUPS.map((g) => {
+          {PARAM_GROUPS.filter((g) => g.id !== 'image' || sc.image).map((g) => {
             const params = PARAMS.filter((p) => p.group === g.id);
             const closed = collapsed[g.id];
             return (
