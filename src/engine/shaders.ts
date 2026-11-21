@@ -407,6 +407,7 @@ void main(){
   else if(uKind==4) col = bgGeometric(uvB, t);
   else if(uKind==5) col = bgVortex(uvB, t);
   else col = bgAbstract(uvB, t);
+  col *= P_opBg;
 
   // image as backdrop: cover-fit, liquid-warped, gently rotating
   if(uImgMode==2){
@@ -416,18 +417,18 @@ void main(){
     col = mix(col, ic, P_imgMix);
   }
 
-  if(P_fractal > 0.01 && uKind != 6) col += kali(uvB, t, 7, 1.6)*P_fractal*1.6*smoothstep(0.1,0.6,length(uvB));
-  if(P_sfAmount > 0.01 && uKind != 1 && uKind != 4) col += sfRings(uvB, t)*P_sfAmount;
-  if(P_partAmount > 0.01) col += particles(uvB, t)*mix(0.4, 1.4, P_partAmount);
+  if(P_fractal > 0.01 && uKind != 6) col += kali(uvB, t, 7, 1.6)*P_fractal*1.6*smoothstep(0.1,0.6,length(uvB))*P_opGeo;
+  if(P_sfAmount > 0.01 && uKind != 1 && uKind != 4) col += sfRings(uvB, t)*P_sfAmount*P_opGeo;
+  if(P_partAmount > 0.01) col += particles(uvB, t)*mix(0.4, 1.4, P_partAmount)*P_opPart;
 
   float eyeS = mix(0.06, 0.42, P_eyeSize);
   vec4 tn = tentacles(uv*rot(t*P_rotSpeed*0.25) + w*P_liquid*0.2, t, eyeS);
-  col = mix(col, tn.rgb, tn.a);
-  if(P_eyeSize > 0.01 && !(uImgMode==1 && P_imgMix > 0.995)){
+  col = mix(col, tn.rgb, tn.a*P_opTent);
+  if(P_eyeSize > 0.01 && P_opEye > 0.001 && !(uImgMode==1 && P_imgMix > 0.995)){
     vec4 ey = eyeLayer(uvE, t, eyeS);
     // aura behind the eye
-    col += vec3(.35,.2,.9)*exp(-length(uvE/eyeS*vec2(0.8,1.3))*2.2)*0.25*(1.0-ey.a);
-    col = mix(col, ey.rgb, ey.a);
+    col += vec3(.35,.2,.9)*exp(-length(uvE/eyeS*vec2(0.8,1.3))*2.2)*0.25*(1.0-ey.a)*P_opEye;
+    col = mix(col, ey.rgb, ey.a*P_opEye);
   }
 
   // image in the centre, in place of the eye: superformula-edged, breathing with the beat

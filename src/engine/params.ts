@@ -16,7 +16,8 @@ export type ParamGroupId =
   | 'glow'
   | 'rotation'
   | 'scale'
-  | 'image';
+  | 'image'
+  | 'opacity';
 
 export interface ParamDef {
   key: string;
@@ -42,6 +43,7 @@ export const PARAM_GROUPS: { id: ParamGroupId; label: string; short: string }[] 
   { id: 'rotation', label: 'Rotation', short: 'ROT' },
   { id: 'scale', label: 'Scale', short: 'SCL' },
   { id: 'image', label: 'Image Layer', short: 'IMG' },
+  { id: 'opacity', label: 'Layer Opacity', short: 'OPA' },
 ];
 
 export const PARAMS: ParamDef[] = [
@@ -98,6 +100,12 @@ export const PARAMS: ParamDef[] = [
   { key: 'imgZoom', label: 'Zoom', group: 'image', min: 0.3, max: 3, def: 1, step: 0.01 },
   { key: 'imgWarp', label: 'Warp', group: 'image', min: 0, max: 1, def: 0.4 },
   { key: 'imgEdge', label: 'Edge Morph', group: 'image', min: 0, max: 1, def: 0.35 },
+  // Layer opacity (1 = fully visible, 0 = hidden)
+  { key: 'opBg', label: 'Background', group: 'opacity', min: 0, max: 1, def: 1 },
+  { key: 'opEye', label: 'Eye', group: 'opacity', min: 0, max: 1, def: 1 },
+  { key: 'opTent', label: 'Tentacles', group: 'opacity', min: 0, max: 1, def: 1 },
+  { key: 'opGeo', label: 'Geometry (SF + Fractal)', group: 'opacity', min: 0, max: 1, def: 1 },
+  { key: 'opPart', label: 'Particles', group: 'opacity', min: 0, max: 1, def: 1 },
 ];
 
 export type ParamKey = (typeof PARAMS)[number]['key'];
