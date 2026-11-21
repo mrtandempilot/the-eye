@@ -1,7 +1,7 @@
 import { clampParam, PARAM_BY_KEY } from '@/engine/params';
 import { KIND_PRESETS, uid } from '@/engine/presets';
-import { SCENE_KINDS, type ImageMode, type Scene, type SceneKind, type TransitionType } from '@/engine/types';
-import { deleteImage, fileToDataUrl, getImage, putImage } from '@/lib/imageStore';
+import { SCENE_KINDS, type ImageMode, type Scene, type SceneImage, type SceneKind, type TransitionType, type VideoPlay } from '@/engine/types';
+import { deleteImage, fileToDataUrl, getImage, MAX_VIDEO_BYTES, posterKey, putImage, videoPoster } from '@/lib/imageStore';
 import { live, store, type AppState, type AudioChannelCfg, type MidiMapping } from './appState';
 
 /* ------------------------------------------------------------------ events
@@ -11,7 +11,8 @@ import { live, store, type AppState, type AudioChannelCfg, type MidiMapping } fr
 type PerfEvent =
   | { type: 'take'; from: string; to: string; transition: TransitionType; duration: number }
   | { type: 'cut'; to: string }
-  | { type: 'committed'; a: string; b: string };
+  | { type: 'committed'; a: string; b: string }
+  | { type: 'hit' };
 const listeners = new Set<(e: PerfEvent) => void>();
 export const onPerfEvent = (fn: (e: PerfEvent) => void) => {
   listeners.add(fn);
@@ -138,18 +139,36 @@ function nameFromFile(file: File) {
   return (base || 'IMAGE').toUpperCase().slice(0, 24);
 }
 
-/** New scene built around an uploaded image; Claude then tunes it. */
+/** Store an uploaded image or video; returns the media descriptor. */
+async function storeMedia(file: File, prev?: SceneImage): Promise<SceneImage> {
+  const id = 'img-' + uid();
+  if (file.type.startsWith('video/')) {
+    if (file.size > MAX_VIDEO_BYTES) throw new Error('Video is larger than 200 MB — please trim or compress it.');
+    const poster = await videoPoster(file);
+    await putImage(id, file);
+    await putImage(posterKey(id), poster);
+    return { id, mode: prev?.mode ?? 'center', kind: 'video', play: prev?.play ?? 'loop', beats: prev?.beats ?? 1 };
+  }
+  await putImage(id, await fileToDataUrl(file));
+  return { id, mode: prev?.mode ?? 'center', kind: 'image' };
+}
+
+/** New scene built around an uploaded image or video; Claude then tunes it. */
 export async function createSceneFromImage(file: File, autoTune = true) {
-  const dataUrl = await fileToDataUrl(file);
-  const imgId = 'img-' + uid();
-  await putImage(imgId, dataUrl);
+  let media: SceneImage;
+  try {
+    media = await storeMedia(file);
+  } catch (e) {
+    alert((e as Error).message);
+    return;
+  }
   const id = uid();
   const scene: Scene = {
     id,
     name: nameFromFile(file),
     kind: 'eye',
     params: { ...KIND_PRESETS.eye, eyeSize: 0.62 },
-    image: { id: imgId, mode: 'center' },
+    image: media,
   };
   store.set((s) => ({ scenes: [...s.scenes, scene], selectedId: id }));
   if (!S().transitioning && S().slotA !== id) store.set({ slotB: id, editTarget: 'B' });
@@ -157,15 +176,29 @@ export async function createSceneFromImage(file: File, autoTune = true) {
   return id;
 }
 
-/** Replace (or add) the image of an existing scene. */
+/** Replace (or add) the image/video of an existing scene. */
 export async function setSceneImage(sceneId: string, file: File, autoTune = false) {
-  const dataUrl = await fileToDataUrl(file);
-  const imgId = 'img-' + uid();
-  await putImage(imgId, dataUrl);
   const old = S().scenes.find((x) => x.id === sceneId)?.image;
-  patchScene(sceneId, { image: { id: imgId, mode: old?.mode ?? 'center' } });
+  let media: SceneImage;
+  try {
+    media = await storeMedia(file, old);
+  } catch (e) {
+    alert((e as Error).message);
+    return;
+  }
+  patchScene(sceneId, { image: media });
   if (old) releaseImage(old.id);
   if (autoTune) await aiTune(sceneId);
+}
+
+export function setVideoPlay(sceneId: string, p: { play?: VideoPlay; beats?: number }) {
+  const img = S().scenes.find((x) => x.id === sceneId)?.image;
+  if (img) patchScene(sceneId, { image: { ...img, ...p } });
+}
+
+/** Manual "glass hit" (keyboard H / MIDI pad) — same as a detected kick. */
+export function triggerHit() {
+  emit({ type: 'hit' });
 }
 
 export function setImageMode(sceneId: string, mode: ImageMode) {
@@ -186,8 +219,8 @@ export async function aiTune(sceneId: string, hint?: string) {
   if (!sc?.image || S().aiBusy.includes(sceneId)) return;
   store.set((s) => ({ aiBusy: [...s.aiBusy, sceneId], aiError: null }));
   try {
-    const image = await getImage(sc.image.id);
-    if (!image) throw new Error('Image not found in this browser.');
+    const image = await getImage(sc.image.kind === 'video' ? posterKey(sc.image.id) : sc.image.id);
+    if (typeof image !== 'string') throw new Error('Image not found in this browser.');
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

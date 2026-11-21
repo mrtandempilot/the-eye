@@ -63,6 +63,8 @@ Guidance:
 - hue rotates ALL colours including the image, so keep hue near 0 (or near 1) unless a deliberate shift serves the image; saturation 1 keeps the image's own colours.
 - Keep the image readable: imgMix 0.85–1, imgWarp 0.15–0.5, moderate feedback (fbAmount ≤ 0.6) and glitch ≤ 0.2 unless the image calls for chaos.
 - In "center" mode choose eyeSize 0.45–0.8 so the image has presence; in "background" mode keep effects around the centre lighter so the image shows.
+- Kick Impact (impShake, impRipple, impCrack, impFlash) makes the screen react like glass being hit on every kick: subtle for calm images, strong (cracks) for aggressive, dark or industrial images.
+- Video parameters (vidSpeed, vidCue) only matter for video clips; the image you see may be a still from a video — keep vidSpeed near 1.
 - This is a live instrument: leave headroom so audio modulation can push parameters further.
 
 Return:

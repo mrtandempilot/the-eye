@@ -1,11 +1,11 @@
 import { clampParam, PARAM_BY_KEY, type ParamValues } from '@/engine/params';
 import { seedFromId } from '@/engine/presets';
-import type { EngineFrame, Scene } from '@/engine/types';
+import type { EngineFrame, ImpactState, Scene } from '@/engine/types';
 import { VisualEngine } from '@/engine/VisualEngine';
 import { AudioEngine } from '@/io/audio';
 import { TouchDesignerLink } from '@/io/bridge';
 import { MidiManager } from '@/io/midi';
-import { getImage, loadImageElement } from '@/lib/imageStore';
+import { createVideoElement, getImage, loadImageElement, type StoredMedia } from '@/lib/imageStore';
 import { onPerfEvent, stepTransition, take } from './actions';
 import { live, store, type AppState } from './appState';
 
@@ -70,7 +70,10 @@ export class PerformanceRuntime {
 
     this.unsubs.push(
       store.subscribe((s, p) => this.onStateChange(s, p)),
-      onPerfEvent((e) => this.td.sendRaw({ type: 'event', name: e.type, data: e })),
+      onPerfEvent((e) => {
+        if (e.type === 'hit') this.fireHit();
+        this.td.sendRaw({ type: 'event', name: e.type, data: e });
+      }),
     );
     this.last = performance.now();
     const loop = (now: number) => {
@@ -83,20 +86,24 @@ export class PerformanceRuntime {
   }
 
   private loadingImages = new Set<string>();
-  private imageData = new Map<string, string>();
+  private imageData = new Map<string, StoredMedia>();
 
-  /** Make sure every scene image is uploaded to the engine as a texture. */
+  /** Make sure every scene image/video is loaded into the engine. */
   private syncImages() {
     for (const sc of store.get().scenes) {
       const id = sc.image?.id;
       if (!id || !this.engine || this.engine.hasImage(id) || this.loadingImages.has(id)) continue;
       this.loadingImages.add(id);
       getImage(id)
-        .then(async (url) => {
-          if (!url || !this.engine) return;
-          const img = await loadImageElement(url);
-          this.engine.setImage(id, img);
-          this.imageData.set(id, url);
+        .then(async (data) => {
+          if (!data || !this.engine) return;
+          if (typeof data === 'string') {
+            this.engine.setImage(id, await loadImageElement(data));
+          } else {
+            const v = await createVideoElement(URL.createObjectURL(data));
+            this.engine.setVideo(id, v);
+          }
+          this.imageData.set(id, data);
           // refresh thumbnails of scenes using it
           store.get().scenes.forEach((x) => x.image?.id === id && this.thumbQueue.add(x.id));
           this.scheduleThumbs();
@@ -107,8 +114,74 @@ export class PerformanceRuntime {
   }
 
   private sendImage(id: string) {
-    const url = this.imageData.get(id);
-    if (url) this.channel?.postMessage({ type: 'image', id, dataUrl: url });
+    const data = this.imageData.get(id);
+    if (typeof data === 'string') this.channel?.postMessage({ type: 'image', id, dataUrl: data });
+    else if (data) this.channel?.postMessage({ type: 'video', id, blob: data });
+  }
+
+  // ---------------------------------------------------------------- kick impact
+  private impact: ImpactState = { hit: 0, age: 99, x: 0.5, y: 0.5, seed: 0 };
+  private kickArmed = true;
+  private hitNow = false;
+
+  private fireHit() {
+    this.hitNow = true;
+    this.impact = {
+      hit: 1,
+      age: 0,
+      x: 0.5 + (Math.random() - 0.5) * 0.35,
+      y: 0.5 + (Math.random() - 0.5) * 0.3,
+      seed: Math.random() * 100,
+    };
+  }
+
+  private stepImpact(dt: number, s: AppState) {
+    if (!s.freeze) {
+      const k = live.levels.kick;
+      if (s.audio.source !== 'off' && this.kickArmed && k > 0.55) {
+        this.kickArmed = false;
+        this.fireHit();
+      } else if (k < 0.3) this.kickArmed = true;
+      this.impact.age += dt;
+      this.impact.hit *= Math.exp(-dt * 9);
+    }
+  }
+
+  // ---------------------------------------------------------------- video playback
+  private lastBeatInt = -1;
+
+  /** Drive every video on air (A and B) from the music; pause the rest. */
+  private stepVideos(s: AppState) {
+    if (!this.engine) return;
+    const onAir = new Set([s.slotA, s.slotB]);
+    const beatInt = Math.floor(live.beat);
+    const newBeat = beatInt !== this.lastBeatInt;
+    this.lastBeatInt = beatInt;
+    for (const sc of s.scenes) {
+      const m = sc.image;
+      if (m?.kind !== 'video') continue;
+      const v = this.engine.getVideo(m.id);
+      if (!v) continue;
+      if (!onAir.has(sc.id) || s.freeze) {
+        if (!v.paused) v.pause();
+        continue;
+      }
+      const dur = v.duration || 0;
+      const cue = (sc.params.vidCue ?? 0) * Math.max(0, dur - 0.05);
+      const rate = Math.max(0.1, sc.params.vidSpeed ?? 1);
+      if (Math.abs(v.playbackRate - rate) > 0.01) v.playbackRate = rate;
+      const play = m.play ?? 'loop';
+      v.loop = play === 'loop';
+      let restart = false;
+      if (play === 'kick') restart = this.hitNow;
+      if (play === 'beat') restart = newBeat && beatInt % Math.max(1, m.beats ?? 1) === 0;
+      if (restart) v.currentTime = cue;
+      if (v.paused && (play === 'loop' || restart || v.currentTime < dur - 0.05)) v.play().catch(() => {});
+    }
+  }
+
+  private videoTime(sc: Scene) {
+    return sc.image?.kind === 'video' ? this.engine?.getVideo(sc.image.id)?.currentTime : undefined;
   }
 
   private onStateChange(s: AppState, p: AppState) {
@@ -175,8 +248,11 @@ export class PerformanceRuntime {
       this.lastAutoBlock = Math.floor(live.beat / Math.max(1, s.transition.autoBeats));
     }
 
-    // 3. audio
+    // 3. audio (+ kick → glass impact, videos follow the music)
     this.audio.update(dt, live.beat);
+    this.stepImpact(dt, s);
+    this.stepVideos(s);
+    this.hitNow = false; // consumed by stepVideos (kick-mode restarts)
 
     // blackout fade (~120 ms)
     const bt = s.blackout ? 1 : 0;
@@ -201,6 +277,7 @@ export class PerformanceRuntime {
       master: s.master,
       blackout: live.blackout,
       renderScale: s.renderScale,
+      impact: { ...this.impact },
     };
     this.frame = frame;
     if (this.engine) {
@@ -225,7 +302,13 @@ export class PerformanceRuntime {
   }
 
   private render(sc: Scene, s: AppState) {
-    return { kind: sc.kind, params: this.modulate(sc.params, s), seed: seedFromId(sc.id), image: sc.image ?? null };
+    return {
+      kind: sc.kind,
+      params: this.modulate(sc.params, s),
+      seed: seedFromId(sc.id),
+      image: sc.image ?? null,
+      videoTime: this.videoTime(sc),
+    };
   }
 
   setMonitors(a: HTMLCanvasElement | null, b: HTMLCanvasElement | null) {

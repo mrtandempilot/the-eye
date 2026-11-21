@@ -75,7 +75,7 @@ export default function EffectsPanel() {
       <ImageControls scene={sc} />
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-2">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
-          {PARAM_GROUPS.filter((g) => g.id !== 'image' || sc.image).map((g) => {
+          {PARAM_GROUPS.filter((g) => (g.id !== 'image' || sc.image) && (g.id !== 'video' || sc.image?.kind === 'video')).map((g) => {
             const params = PARAMS.filter((p) => p.group === g.id);
             const closed = collapsed[g.id];
             return (

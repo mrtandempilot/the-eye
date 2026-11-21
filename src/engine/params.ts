@@ -17,7 +17,9 @@ export type ParamGroupId =
   | 'rotation'
   | 'scale'
   | 'image'
-  | 'opacity';
+  | 'video'
+  | 'opacity'
+  | 'impact';
 
 export interface ParamDef {
   key: string;
@@ -43,7 +45,9 @@ export const PARAM_GROUPS: { id: ParamGroupId; label: string; short: string }[] 
   { id: 'rotation', label: 'Rotation', short: 'ROT' },
   { id: 'scale', label: 'Scale', short: 'SCL' },
   { id: 'image', label: 'Image Layer', short: 'IMG' },
+  { id: 'video', label: 'Video', short: 'VID' },
   { id: 'opacity', label: 'Layer Opacity', short: 'OPA' },
+  { id: 'impact', label: 'Kick Impact (glass hit)', short: 'HIT' },
 ];
 
 export const PARAMS: ParamDef[] = [
@@ -106,6 +110,14 @@ export const PARAMS: ParamDef[] = [
   { key: 'opTent', label: 'Tentacles', group: 'opacity', min: 0, max: 1, def: 1 },
   { key: 'opGeo', label: 'Geometry (SF + Fractal)', group: 'opacity', min: 0, max: 1, def: 1 },
   { key: 'opPart', label: 'Particles', group: 'opacity', min: 0, max: 1, def: 1 },
+  // Video playback (only when the scene media is a video)
+  { key: 'vidSpeed', label: 'Speed', group: 'video', min: 0.1, max: 3, def: 1, step: 0.01 },
+  { key: 'vidCue', label: 'Cue Point', group: 'video', min: 0, max: 1, def: 0 },
+  // Kick impact — the screen reacts like glass being hit on every kick
+  { key: 'impShake', label: 'Shake', group: 'impact', min: 0, max: 1, def: 0.25 },
+  { key: 'impRipple', label: 'Shockwave', group: 'impact', min: 0, max: 1, def: 0.25 },
+  { key: 'impCrack', label: 'Glass Cracks', group: 'impact', min: 0, max: 1, def: 0 },
+  { key: 'impFlash', label: 'Flash', group: 'impact', min: 0, max: 1, def: 0.1 },
 ];
 
 export type ParamKey = (typeof PARAMS)[number]['key'];

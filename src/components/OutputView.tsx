@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { type EngineFrame } from '@/engine/types';
 import { VisualEngine } from '@/engine/VisualEngine';
-import { loadImageElement } from '@/lib/imageStore';
+import { createVideoElement, loadImageElement } from '@/lib/imageStore';
 import { OUTPUT_CHANNEL } from '@/engine/types';
 
 /**
@@ -45,6 +45,14 @@ export default function OutputView() {
       } else if (e.data?.type === 'image') {
         const id = String(e.data.id);
         loadImageElement(e.data.dataUrl).then((img) => engine.setImage(id, img)).catch(() => {});
+      } else if (e.data?.type === 'video' && e.data.blob instanceof Blob) {
+        const id = String(e.data.id);
+        createVideoElement(URL.createObjectURL(e.data.blob))
+          .then((v) => {
+            v.loop = false; // timing follows the controller
+            engine.setVideo(id, v);
+          })
+          .catch(() => {});
       }
     };
     const hello = () => ch.postMessage({ type: 'output-hello' });
@@ -58,7 +66,20 @@ export default function OutputView() {
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const alive = !!frame && performance.now() - lastAt < 3000;
-      if (alive && frame) engine.render({ ...frame, renderScale: 1 });
+      if (alive && frame) {
+        // keep videos in step with the controller's playback
+        for (const sr of [frame.a, frame.mix > 0 ? frame.b : null]) {
+          if (!sr?.image || sr.videoTime === undefined) continue;
+          const v = engine.getVideo(sr.image.id);
+          if (!v) continue;
+          if (Math.abs(v.currentTime - sr.videoTime) > 0.15) v.currentTime = sr.videoTime;
+          const rate = Math.max(0.1, sr.params.vidSpeed ?? 1);
+          if (Math.abs(v.playbackRate - rate) > 0.01) v.playbackRate = rate;
+          if (v.paused && !frame.freeze) v.play().catch(() => {});
+          if (frame.freeze && !v.paused) v.pause();
+        }
+        engine.render({ ...frame, renderScale: 1 });
+      }
       const next = alive ? 'live' : 'waiting';
       if (next !== shown) {
         shown = next;

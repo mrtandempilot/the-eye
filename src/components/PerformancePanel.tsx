@@ -64,6 +64,7 @@ export default function PerformancePanel() {
           <Big label="BLACKOUT" hint="B" target="btn:blackout" tone="danger" active={s.blackout} onClick={() => A.toggleBlackout()} />
           <Big label="FREEZE" hint="F" target="btn:freeze" tone="cyan" active={s.freeze} onClick={() => A.toggleFreeze()} />
         </div>
+        <Big label="✷ GLASS HIT" hint="H · also fires on every kick" target="btn:hit" tone="cyan" onClick={A.triggerHit} />
         <div className="grid grid-cols-3 gap-2">
           <Big label="◀ PREV" hint="←" target="btn:prev" onClick={A.prevScene} />
           <Big label="RANDOM" hint="R" target="btn:random" onClick={A.randomScene} />

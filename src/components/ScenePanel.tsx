@@ -99,13 +99,13 @@ export default function ScenePanel() {
               <div className="panel absolute right-0 top-9 z-40 w-52 p-1 shadow-2xl shadow-black/70">
                 <ImagePicker
                   className="mb-1 block w-full rounded border border-cyan/40 bg-cyan/10 px-2 py-2 text-left text-[12px] font-semibold text-cyan hover:bg-cyan/20"
-                  title="Upload an image; Claude designs a scene around it"
+                  title="Upload an image or video; Claude designs a scene around it"
                   onFile={(f) => {
                     setAddOpen(false);
                     A.createSceneFromImage(f);
                   }}
                 >
-                  ✦ From image (AI)…
+                  ✦ From image / video (AI)…
                 </ImagePicker>
                 <div className="label px-2 py-1.5">Generator</div>
                 {SCENE_KINDS.map((k) => (
@@ -119,13 +119,13 @@ export default function ScenePanel() {
         }
       />
       <div className="label border-b border-line px-3 py-1.5 !text-[9px] !tracking-[.12em]">
-        Click = cue to B · Double-click = take · Drag to reorder · Drop images to create AI scenes
+        Click = cue to B · Double-click = take · Drag to reorder · Drop images or videos to create AI scenes
       </div>
       <ol
         className="scroll-thin flex min-h-0 flex-1 gap-2 overflow-auto p-2 max-wide:flex-row max-wide:overflow-x-auto wide:flex-col"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
-          const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+          const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
           if (!files.length) return;
           e.preventDefault();
           files.slice(0, 4).forEach((f) => A.createSceneFromImage(f));
@@ -183,7 +183,7 @@ export default function ScenePanel() {
                 <span className="mono absolute left-1 top-1 rounded-[3px] bg-black/70 px-1 text-[9px] text-dim">{String(i + 1).padStart(2, '0')}</span>
                 {sc.image && (
                   <span className="absolute right-1 top-1 rounded-[3px] bg-black/70 px-1 text-[9px] text-cyan" title={sc.image.mode === 'center' ? 'Image in the centre' : 'Image backdrop'}>
-                    IMG
+                    {sc.image.kind === 'video' ? '▶ VID' : 'IMG'}
                   </span>
                 )}
                 {s.aiBusy.includes(sc.id) && (

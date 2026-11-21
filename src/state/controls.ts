@@ -22,6 +22,7 @@ export const BUTTONS: Record<string, { label: string; run: () => void }> = {
   prev: { label: 'Prev', run: A.prevScene },
   next: { label: 'Next', run: A.nextScene },
   tap: { label: 'Tap', run: A.tapTempo },
+  hit: { label: 'Glass Hit', run: A.triggerHit },
   auto: { label: 'Auto', run: () => A.setTransition({ auto: !store.get().transition.auto }) },
 };
 

@@ -7,7 +7,7 @@ import {
   TRANSITION_FRAG,
   VERT,
 } from './shaders';
-import { SCENE_KINDS, TRANSITIONS, type EngineFrame, type SceneRender } from './types';
+import { SCENE_KINDS, TRANSITIONS, type EngineFrame, type ImpactState, type SceneRender } from './types';
 
 /**
  * WebGL2 visual engine. It knows nothing about React, MIDI, audio or the
@@ -59,7 +59,7 @@ export class VisualEngine {
   private thumbOut: Target;
   private black: Target;
   private paramBuf = new Float32Array(PARAMS.length);
-  private images = new Map<string, { tex: WebGLTexture; aspect: number }>();
+  private images = new Map<string, { tex: WebGLTexture; aspect: number; video?: HTMLVideoElement; uploaded?: number }>();
   private pixelBuf = new Uint8Array(MON_W * MON_H * 4);
   private floatFb: boolean;
   private iw = 0;
@@ -112,7 +112,10 @@ export class VisualEngine {
     this.post = this.program(POST_FRAG, [
       'uSrc', 'uPrev', 'uRes', 'uTime', 'uFbAmount', 'uFbZoom', 'uFbRotate', 'uGlitch', 'uGlow', 'uGlowTh',
     ]);
-    this.out = this.program(OUTPUT_FRAG, ['uSrc', 'uRes', 'uTime', 'uMaster', 'uBlack']);
+    this.out = this.program(OUTPUT_FRAG, [
+      'uSrc', 'uRes', 'uTime', 'uMaster', 'uBlack',
+      'uHit', 'uHitAge', 'uHitPos', 'uHitSeed', 'uShake', 'uRipple', 'uCrack', 'uFlash',
+    ]);
     this.blit = this.program(BLIT_FRAG, ['uSrc']);
 
     this.monA = this.target(MON_W, MON_H);
@@ -245,6 +248,10 @@ export class VisualEngine {
     gl.uniform1i(u.uKind, Math.max(0, SCENE_KINDS.indexOf(s.kind)));
     gl.uniform1fv(u.uP, packParams(s.params, this.paramBuf));
     const img = s.image ? this.images.get(s.image.id) : undefined;
+    if (img?.video && img.uploaded !== this.frameNo && img.video.readyState >= 2) {
+      this.upload(img.tex, img.video);
+      img.uploaded = this.frameNo;
+    }
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, img ? img.tex : this.black.tex);
     gl.uniform1i(u.uImg, 3);
@@ -253,16 +260,9 @@ export class VisualEngine {
     this.draw(dst);
   }
 
-  /** Upload (or replace) an image texture referenced by SceneImage.id */
-  setImage(id: string, source: TexImageSource & { width: number; height: number }) {
+  private upload(tex: WebGLTexture, source: TexImageSource) {
     const gl = this.gl;
-    let entry = this.images.get(id);
-    if (!entry) {
-      entry = { tex: gl.createTexture()!, aspect: 1 };
-      this.images.set(id, entry);
-    }
-    entry.aspect = source.width / Math.max(1, source.height);
-    gl.bindTexture(gl.TEXTURE_2D, entry.tex);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -271,6 +271,36 @@ export class VisualEngine {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+  }
+
+  private entry(id: string) {
+    let e = this.images.get(id);
+    if (!e) {
+      e = { tex: this.gl.createTexture()!, aspect: 1 };
+      this.images.set(id, e);
+    }
+    return e;
+  }
+
+  /** Upload (or replace) an image texture referenced by SceneImage.id */
+  setImage(id: string, source: TexImageSource & { width: number; height: number }) {
+    const e = this.entry(id);
+    e.video = undefined;
+    e.aspect = source.width / Math.max(1, source.height);
+    this.upload(e.tex, source);
+  }
+
+  /** Attach a video; its current frame is uploaded whenever a scene using it renders. */
+  setVideo(id: string, video: HTMLVideoElement) {
+    const e = this.entry(id);
+    e.video = video;
+    e.aspect = video.videoWidth / Math.max(1, video.videoHeight);
+    e.uploaded = -1;
+    if (video.readyState >= 2) this.upload(e.tex, video);
+  }
+
+  getVideo(id: string) {
+    return this.images.get(id)?.video;
   }
 
   hasImage(id: string) {
@@ -302,7 +332,10 @@ export class VisualEngine {
     this.draw(dst);
   }
 
-  private renderOutput(src: Target, dst: Target | null, master: number, black: number, time: number) {
+  private renderOutput(
+    src: Target, dst: Target | null, master: number, black: number, time: number,
+    impact?: ImpactState, imp?: Record<string, number>,
+  ) {
     const gl = this.gl;
     const { p, u } = this.out;
     gl.useProgram(p);
@@ -312,6 +345,15 @@ export class VisualEngine {
     gl.uniform1f(u.uTime, time);
     gl.uniform1f(u.uMaster, master);
     gl.uniform1f(u.uBlack, black);
+    const on = impact && imp;
+    gl.uniform1f(u.uHit, on ? impact.hit : 0);
+    gl.uniform1f(u.uHitAge, on ? impact.age : 99);
+    gl.uniform2f(u.uHitPos, on ? impact.x : 0.5, on ? impact.y : 0.5);
+    gl.uniform1f(u.uHitSeed, on ? impact.seed : 0);
+    gl.uniform1f(u.uShake, on ? imp.impShake ?? 0 : 0);
+    gl.uniform1f(u.uRipple, on ? imp.impRipple ?? 0 : 0);
+    gl.uniform1f(u.uCrack, on ? (imp.impCrack ?? 0) * Math.exp(-impact.age * 1.3) : 0);
+    gl.uniform1f(u.uFlash, on ? imp.impFlash ?? 0 : 0);
     this.draw(dst);
   }
 
@@ -344,7 +386,7 @@ export class VisualEngine {
     const a = f.a.params;
     const b = f.b?.params;
     const m = f.b ? f.mix : 0;
-    const k = ['fbAmount', 'fbZoom', 'fbRotate', 'glitch', 'glow', 'glowThreshold'];
+    const k = ['fbAmount', 'fbZoom', 'fbRotate', 'glitch', 'glow', 'glowThreshold', 'impShake', 'impRipple', 'impCrack', 'impFlash'];
     const out: Record<string, number> = {};
     for (const key of k) {
       const va = a[key] ?? 0;
@@ -396,12 +438,13 @@ export class VisualEngine {
       gl.uniform2f(u.uRes, this.iw, this.ih);
       this.draw(this.tMix);
 
-      this.renderPost(this.tMix, prev, cur, this.postParams(f), f.time);
+      const pp = this.postParams(f);
+      this.renderPost(this.tMix, prev, cur, pp, f.time);
       this.fbIdx = 1 - this.fbIdx;
-      this.renderOutput(cur, null, f.master, f.blackout, f.time);
+      this.renderOutput(cur, null, f.master, f.blackout, f.time, f.impact, pp);
     } else {
       // frozen: keep showing the last feedback frame, still honour master/blackout
-      this.renderOutput(prev, null, f.master, f.blackout, f.time);
+      this.renderOutput(prev, null, f.master, f.blackout, f.time, f.impact, this.postParams(f));
     }
 
     // low-res monitors (A program / B preview), every 3rd frame

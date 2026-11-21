@@ -25,9 +25,17 @@ export const KIND_LABEL: Record<SceneKind, string> = {
 /** center: the image replaces the eye; background: the image is the backdrop */
 export type ImageMode = 'center' | 'background';
 
+/** how a video clip follows the music */
+export type VideoPlay = 'loop' | 'kick' | 'beat';
+
+/** Image or video layer of a scene (field kept as `image` for compatibility). */
 export interface SceneImage {
-  id: string; // key in the browser image store (IndexedDB)
+  id: string; // key in the browser media store (IndexedDB)
   mode: ImageMode;
+  kind?: 'image' | 'video';
+  play?: VideoPlay;
+  /** beat mode: restart every N beats */
+  beats?: number;
 }
 
 export interface Scene {
@@ -67,6 +75,17 @@ export interface SceneRender {
   /** per-scene seed so duplicated scenes can diverge */
   seed: number;
   image?: SceneImage | null;
+  /** controller's video playback time, so the output window can follow it */
+  videoTime?: number;
+}
+
+/** A kick "hit": drives the glass-impact effect */
+export interface ImpactState {
+  hit: number; // 1 at the moment of impact, decays quickly
+  age: number; // seconds since the last impact
+  x: number; // impact point, 0..1 screen space
+  y: number;
+  seed: number;
 }
 
 /**
@@ -86,6 +105,7 @@ export interface EngineFrame {
   master: number; // 0..1.5
   blackout: number; // 0..1 (1 = black)
   renderScale: number; // internal resolution multiplier
+  impact?: ImpactState;
 }
 
 /** BroadcastChannel name used to stream frames to the pop-out output window. */

@@ -608,15 +608,69 @@ uniform vec2 uRes;
 uniform float uTime;
 uniform float uMaster;
 uniform float uBlack;
+// kick impact ("glass hit")
+uniform float uHit;      // 1 at impact, decays fast
+uniform float uHitAge;   // seconds since impact
+uniform vec2  uHitPos;   // 0..1
+uniform float uHitSeed;
+uniform float uShake;
+uniform float uRipple;
+uniform float uCrack;    // crack visibility (already includes fade-out)
+uniform float uFlash;
 in vec2 vUv;
 out vec4 fragColor;
 ${COMMON}
 vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }
+
+// shattered-glass cells: x = distance to nearest crack edge, yz = cell id
+vec3 shards(vec2 p){
+  vec2 ip = floor(p), fp = fract(p);
+  float d1 = 8.0, d2 = 8.0; vec2 id = vec2(0.);
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
+    vec2 g = vec2(float(i), float(j));
+    vec2 o = hash22(ip + g + uHitSeed*13.1);
+    vec2 r = g + o - fp;
+    float d = dot(r,r);
+    if(d < d1){ d2 = d1; d1 = d; id = ip + g; }
+    else if(d < d2){ d2 = d; }
+  }
+  return vec3(sqrt(d2) - sqrt(d1), id);
+}
+
 void main(){
-  vec3 col = texture(uSrc, vUv).rgb*uMaster*1.15;
-  col = aces(col);
-  vec2 c = vUv-0.5;
-  col *= 1.0 - 0.45*dot(c,c)*1.6;
+  vec2 uv = vUv;
+  float asp = uRes.x/uRes.y;
+
+  // camera shake
+  float st = floor(uTime*60.0);
+  uv += (vec2(hash12(vec2(st, uHitSeed)), hash12(vec2(uHitSeed+3.1, st)))-0.5)*0.045*uShake*uHit;
+
+  // shockwave ring travelling out from the impact point
+  vec2 c = (uv - uHitPos)*vec2(asp, 1.0);
+  float r = length(c);
+  float front = uHitAge*1.4;
+  float wave = exp(-pow((r - front)*10.0, 2.0))*exp(-uHitAge*2.2);
+  uv -= normalize(c + 1e-5)/vec2(asp,1.0)*wave*0.035*uRipple;
+
+  // glass cracks: radial + shard edges around the impact, shards slightly offset
+  float edge = 0.0;
+  if(uCrack > 0.002){
+    float a = atan(c.y, c.x);
+    vec2 pp = vec2(a*2.2 + uHitSeed, log(r + 0.03)*2.5);   // denser near the impact
+    vec3 sh = shards(pp);
+    float fall = exp(-r*2.2);
+    edge = smoothstep(0.06, 0.0, sh.x)*fall*uCrack;
+    uv += (hash22(sh.yz) - 0.5)*0.012*uCrack*fall;
+  }
+
+  vec3 col = texture(uSrc, uv).rgb;
+  col += vec3(.75,.9,1.)*edge*1.2;                       // light catching the cracks
+  col += vec3(.55,.7,1.)*wave*0.25*uRipple;
+  col += vec3(.7,.8,1.)*uHit*uFlash*0.7;
+
+  col = aces(col*uMaster*1.15);
+  vec2 v = vUv-0.5;
+  col *= 1.0 - 0.45*dot(v,v)*1.6;
   col += (hash12(vUv*uRes + fract(uTime)*100.0)-0.5)*0.025;
   col *= 1.0 - uBlack;
   fragColor = vec4(max(col,0.0), 1.0);

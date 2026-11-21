@@ -24,6 +24,20 @@ npm run bridge     # optional: WebSocket ⇄ OSC bridge for TouchDesigner / Able
 | Audio in `DEMO` mode | **Simulated** from the BPM clock, and labelled SIMULATED throughout the UI. |
 | TouchDesigner | **Real** WebSocket client. It shows DISCONNECTED and the **DEMO MODE** badge until a server answers. |
 
+## Video clips and kick impact
+
+- **Video:** the same **✦ From image / video (AI)** entry also takes MP4 or
+  WebM clips up to 200 MB. A clip is a texture layer like an image, with three
+  play modes. **LOOP** plays continuously. **ON KICK** restarts from the cue
+  point on every detected kick. **ON BEAT** restarts every 1, 2 or 4 beats, so
+  a hit in the clip lands on the beat. The Video sliders set speed and cue
+  point. The output window follows the controller's playback time.
+- **Kick Impact:** on every kick (or the **✷ GLASS HIT** button / `H` key) the
+  screen reacts like glass being hit, with shake, a shockwave from the impact
+  point, glass cracks that fade out, and a flash. Each part has its own slider
+  in the **Kick Impact** group, and the effect is drawn after the feedback loop
+  so cracks don't smear.
+
 ## Image scenes tuned by Claude
 
 Use **+ NEW → ✦ From image (AI)**, or drop image files onto the scene library.

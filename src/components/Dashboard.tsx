@@ -25,6 +25,7 @@ const SHORTCUTS: [string, string][] = [
   ['B', 'Blackout'],
   ['F', 'Freeze'],
   ['T', 'Tap tempo'],
+  ['H', 'Glass hit (impact effect)'],
   ['1 – 7', 'Transition type'],
   ['A / S', 'Edit slot A / B'],
   ['L', 'MIDI learn'],
@@ -109,6 +110,7 @@ export default function Dashboard() {
       else if (k === 'b' || k === 'B') A.toggleBlackout();
       else if (k === 'f' || k === 'F') A.toggleFreeze();
       else if (k === 't' || k === 'T') A.tapTempo();
+      else if (k === 'h' || k === 'H') A.triggerHit();
       else if (k === 'l' || k === 'L') A.toggleMidiLearn();
       else if (k === 'a' || k === 'A') A.setEditTarget('A');
       else if (k === 's' || k === 'S') A.setEditTarget('B');
