@@ -185,8 +185,15 @@ async function viaOpenRouter(dataUrl: string, hint?: string): Promise<{ design: 
 export async function POST(req: Request) {
   const useOpenRouter = !!process.env.OPENROUTER_API_KEY;
   if (!useOpenRouter && !process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
+    // diagnostics: names only, never values
+    const seen = Object.keys(process.env).filter((k) => /OPENROUTER|ANTHROPIC/i.test(k));
+    const where = process.env.VERCEL_ENV ?? 'local';
     return Response.json(
-      { error: 'No AI key on the server. Add OPENROUTER_API_KEY (or ANTHROPIC_API_KEY) in Vercel → Settings → Environment Variables and redeploy.' },
+      {
+        error:
+          `No AI key on the server (environment: ${where}; related variables seen: ${seen.length ? seen.join(', ') : 'none'}). ` +
+          'Add OPENROUTER_API_KEY in Vercel → Settings → Environment Variables for this environment, then redeploy.',
+      },
       { status: 503 },
     );
   }
