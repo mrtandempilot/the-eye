@@ -31,16 +31,24 @@ The image becomes a texture layer in the scene. In **CENTER** mode it replaces
 the eye, with a superformula-shaped edge and tentacles behind it. In
 **BACKDROP** mode it fills the screen behind the effects.
 
-Claude (`claude-opus-5-5`, via the server route `src/app/api/analyze/route.ts`)
+Claude (via the server route `src/app/api/analyze/route.ts`)
 looks at the image and picks the generator, the image mode and all of the
 parameters, then explains its choices in a short note. In the effect panel you
 can run **✦ AI TUNE** again with an optional note (for example "darker, slower,
 more tentacles"). You can also replace or remove the image there, and adjust
 the **Image Layer** sliders (mix, zoom, warp, edge morph).
 
-- The route needs **`ANTHROPIC_API_KEY`** in the server environment. On Vercel,
-  add it under Settings → Environment Variables and redeploy. Without it the
-  image still works and only the AI tuning reports that the key is missing.
+- The route needs an AI key in the server environment (Vercel → Settings →
+  Environment Variables, then redeploy). Without a key, images still work and
+  only the AI tuning reports that the key is missing.
+
+  | Variable | Provider | Default model |
+  |---|---|---|
+  | `OPENROUTER_API_KEY` | OpenRouter (used if set) | `anthropic/claude-haiku-5.5`, change with `OPENROUTER_MODEL` |
+  | `ANTHROPIC_API_KEY` | Anthropic API directly | `claude-opus-5-5`, change with `ANTHROPIC_MODEL` |
+
+  Claude Haiku 5.5 costs roughly 0.1 cent per image. Never commit keys to the
+  repository.
 - Images are downscaled to 1280 px and kept in this browser's IndexedDB. They
   are sent to the pop-out output window, but they are not uploaded anywhere
   except to Claude for analysis.
