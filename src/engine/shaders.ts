@@ -213,6 +213,96 @@ vec3 bgAbstract(vec2 p, float t){
   return c;
 }
 
+
+// ---------------------------------------------------------------- starfield
+// Crisp point stars (pixel-sized), twinkle, diffraction spikes on bright ones.
+vec3 starLayer(vec2 p, float scale, float seed, float px, float t, bool spikes){
+  vec2 g = p*scale;
+  vec2 ip = floor(g);
+  vec3 c = vec3(0.);
+  float dens = mix(0.05, 0.75, P_starDensity);
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
+    vec2 id = ip + vec2(float(i), float(j));
+    vec2 h = hash22(id + seed);
+    if(h.x <= dens){
+    float h3 = hash12(id + seed*1.7);
+    vec2 sp = (id + 0.15 + 0.7*hash22(id*1.31 + seed))/scale;
+    vec2 d = (p - sp)/px;                       // in pixels
+    float mag = pow(h3, 3.0);                   // few bright, many faint
+    float rad = mix(0.55, 1.6, P_starSize)*(0.6 + 1.8*mag);
+    float core = exp(-dot(d,d)/(rad*rad));
+    float tw = 1.0 - P_starTwinkle*0.85*(0.5 + 0.5*sin(t*(1.5 + 4.0*h.y) + h3*40.0));
+    float b = (0.25 + 1.6*mag)*tw;
+    float spike = 0.0;
+    if(spikes && mag > 0.35){
+      float L = mix(4.0, 16.0, mag)*mix(0.6, 1.6, P_starSize);
+      spike = exp(-abs(d.y)*1.6)*exp(-abs(d.x)/L) + exp(-abs(d.x)*1.6)*exp(-abs(d.y)/L);
+      spike *= 0.6*mag;
+    }
+    vec3 tint = mix(vec3(1.0,0.82,0.62), vec3(0.68,0.8,1.0), hash12(id + seed*3.3));
+    tint = mix(tint, vec3(1.0), 0.45);
+    c += tint*(core + spike)*b;
+    }
+  }
+  return c;
+}
+
+vec3 shootingStars(vec2 p, float t, float px){
+  vec3 c = vec3(0.);
+  if(P_shootRate < 0.01) return c;
+  float asp = uRes.x/uRes.y;
+  for(int k=0;k<4;k++){
+    float fk = float(k);
+    float period = mix(16.0, 1.6, P_shootRate)*(0.7 + 0.9*hash12(vec2(fk, uSeed)));
+    float tt = t + fk*7.31;
+    float cyc = floor(tt/period);
+    float local = fract(tt/period)*period;
+    float dur = mix(1.6, 0.35, P_shootSpeed);
+    vec2 r = hash22(vec2(cyc, fk*13.7 + uSeed));
+    bool isOn = local <= dur && hash12(vec2(cyc*1.7, fk)) <= 0.8;   // occasional gaps
+    if(isOn){
+    vec2 start = vec2((r.x - 0.5)*asp*1.1, 0.15 + r.y*0.45);
+    float ang = -0.35 - hash12(vec2(fk, cyc))*0.9;        // heading down-left/right
+    if(r.x > 0.5) ang = PI - ang;
+    vec2 dir = vec2(cos(ang), sin(ang));
+    float u = local/dur;
+    vec2 head = start + dir*u*mix(0.5, 1.1, P_shootSpeed);
+    float trail = mix(0.05, 0.45, P_shootLength);
+    vec2 v = p - head;
+    float along = -dot(v, dir);                            // 0 at head, + behind
+    float perp = abs(dot(v, vec2(-dir.y, dir.x)));
+    if(along >= -px*3.0 && along <= trail){
+    float a = 1.0 - clamp(along/trail, 0.0, 1.0);
+    float w = px*mix(0.8, 1.6, a);
+    float line = exp(-(perp*perp)/(w*w))*a*a;
+    float headGlow = exp(-dot(v,v)/(px*px*6.0));
+    float fade = smoothstep(0.0, 0.12, u)*smoothstep(1.0, 0.75, u);
+    c += vec3(0.85,0.92,1.0)*(line*1.3 + headGlow*1.5)*fade;
+    }
+    }
+  }
+  return c;
+}
+
+vec3 starfield(vec2 p, float t){
+  float px = 1.0/uRes.y;
+  vec2 drift = vec2(t*0.004*P_starDrift, t*0.0015*P_starDrift);
+  vec3 c = starLayer(p + drift*0.4, 70.0, 11.0, px, t, false)*0.55;
+  c += starLayer(p + drift*0.7, 38.0, 23.0, px, t, false)*0.8;
+  c += starLayer(p + drift, 16.0, 37.0, px, t, true);
+  c += shootingStars(p, t, px);
+  return c;
+}
+
+vec3 bgCosmos(vec2 p, float t){
+  vec2 q = p*1.3 + vec2(t*0.004, 0.0);
+  float n = fbm(q*1.6 + uSeed);
+  float n2 = fbm(q*3.1 - 4.0 + n);
+  vec3 neb = mix(vec3(0.20,0.06,0.42), vec3(0.06,0.22,0.65), n2);
+  neb *= pow(clamp(n*n2*2.2, 0.0, 1.0), 2.2);
+  return vec3(0.004,0.004,0.012) + neb*P_nebula*0.9;
+}
+
 // ---------------------------------------------------------------- layers
 vec3 sfRings(vec2 p, float t){
   float r = length(p), a = atan(p.y,p.x);
@@ -406,7 +496,9 @@ void main(){
   else if(uKind==3) col = bgLiquid(uvB, t);
   else if(uKind==4) col = bgGeometric(uvB, t);
   else if(uKind==5) col = bgVortex(uvB, t);
-  else col = bgAbstract(uvB, t);
+  else if(uKind==6) col = bgAbstract(uvB, t);
+  else col = bgCosmos(uv, t);
+  if(P_starBright > 0.01) col += starfield(uv, t)*P_starBright;   // raw uv: stays pin-sharp
   col *= P_opBg;
 
   // image as backdrop: cover-fit, liquid-warped, gently rotating
@@ -434,17 +526,19 @@ void main(){
   // image in the centre, in place of the eye: superformula-edged, breathing with the beat
   if(uImgMode==1){
     float R = eyeS*(1.0 + 0.06*uPulse*P_pulse);
-    vec2 q = (uvE + w*P_imgWarp*0.18)/R;
+    vec2 q = (uv + w*P_liquid*0.08*P_imgWarp + w*P_imgWarp*0.18)/R;
+    q *= rot(t*P_imgSpin*0.25);
     float a = atan(q.y,q.x);
     float d = length(q) - mix(1.0, sfNorm(a + t*0.08), P_imgEdge*0.45);
-    float aa = 3.0/(uRes.y*R);
-    float m = smoothstep(aa, -aa, d);
+    float aa = 1.5/(uRes.y*R);
+    float m = smoothstep(aa, -aa - P_imgSoft*0.55, d);
     vec2 size = vec2(uImgAspect,1.0)*max(1.0, 1.0/uImgAspect)*2.0;
     vec2 qi = q + w*P_imgWarp*0.6*smoothstep(-0.6, 0.0, d);
     vec3 ic = texture(uImg, qi/(size*max(P_imgZoom,0.05)) + 0.5).rgb;
-    col += vec3(.35,.2,.9)*exp(-max(d,0.0)*3.0)*0.35*(1.0-m);
+    float hard = 1.0 - smoothstep(0.0, 0.1, P_imgSoft);   // no rim/aura on soft edges
+    col += vec3(.35,.2,.9)*exp(-max(d,0.0)*3.0)*0.35*(1.0-m)*hard;
     col = mix(col, ic, m*P_imgMix);
-    col += vec3(.45,.3,1.)*smoothstep(0.08, 0.0, abs(d))*(0.35 + 0.5*uPulse)*P_imgMix;
+    col += vec3(.45,.3,1.)*smoothstep(0.08, 0.0, abs(d))*(0.35 + 0.5*uPulse)*P_imgMix*hard;
   }
 
   col = hueShift(col, P_hue + P_colorCycle*0.35*sin(t*0.07));

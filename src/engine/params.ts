@@ -19,7 +19,8 @@ export type ParamGroupId =
   | 'image'
   | 'video'
   | 'opacity'
-  | 'impact';
+  | 'impact'
+  | 'stars';
 
 export interface ParamDef {
   key: string;
@@ -48,6 +49,7 @@ export const PARAM_GROUPS: { id: ParamGroupId; label: string; short: string }[] 
   { id: 'video', label: 'Video', short: 'VID' },
   { id: 'opacity', label: 'Layer Opacity', short: 'OPA' },
   { id: 'impact', label: 'Kick Impact (glass hit)', short: 'HIT' },
+  { id: 'stars', label: 'Stars & Shooting Stars', short: 'STR' },
 ];
 
 export const PARAMS: ParamDef[] = [
@@ -118,6 +120,19 @@ export const PARAMS: ParamDef[] = [
   { key: 'impRipple', label: 'Shockwave', group: 'impact', min: 0, max: 1, def: 0.25 },
   { key: 'impCrack', label: 'Glass Cracks', group: 'impact', min: 0, max: 1, def: 0 },
   { key: 'impFlash', label: 'Flash', group: 'impact', min: 0, max: 1, def: 0.1 },
+  // Image layer extras
+  { key: 'imgSoft', label: 'Edge Softness', group: 'image', min: 0, max: 1, def: 0 },
+  { key: 'imgSpin', label: 'Spin', group: 'image', min: -1, max: 1, def: 0 },
+  // Starfield (background layer, any scene) + shooting stars
+  { key: 'starBright', label: 'Brightness', group: 'stars', min: 0, max: 2, def: 0 },
+  { key: 'starDensity', label: 'Density', group: 'stars', min: 0, max: 1, def: 0.5 },
+  { key: 'starSize', label: 'Size', group: 'stars', min: 0, max: 1, def: 0.4 },
+  { key: 'starTwinkle', label: 'Twinkle', group: 'stars', min: 0, max: 1, def: 0.5 },
+  { key: 'starDrift', label: 'Drift', group: 'stars', min: 0, max: 1, def: 0.1 },
+  { key: 'shootRate', label: 'Shooting Stars', group: 'stars', min: 0, max: 1, def: 0.3 },
+  { key: 'shootSpeed', label: 'Shooting Speed', group: 'stars', min: 0, max: 1, def: 0.5 },
+  { key: 'shootLength', label: 'Trail Length', group: 'stars', min: 0, max: 1, def: 0.5 },
+  { key: 'nebula', label: 'Nebula Haze', group: 'stars', min: 0, max: 1, def: 0.3 },
 ];
 
 export type ParamKey = (typeof PARAMS)[number]['key'];

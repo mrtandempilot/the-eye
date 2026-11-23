@@ -9,6 +9,7 @@ export const SCENE_KINDS = [
   'geometric',
   'particles',
   'abstract',
+  'cosmos',
 ] as const;
 export type SceneKind = (typeof SCENE_KINDS)[number];
 
@@ -20,6 +21,7 @@ export const KIND_LABEL: Record<SceneKind, string> = {
   geometric: 'Superformula Lattice',
   particles: 'Particle Vortex',
   abstract: 'Kali Fractal',
+  cosmos: 'Deep Space',
 };
 
 /** center: the image replaces the eye; background: the image is the backdrop */

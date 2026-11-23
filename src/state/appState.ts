@@ -111,7 +111,7 @@ export function initialState(): AppState {
     master: 1,
     freeze: false,
     blackout: false,
-    renderScale: 0.75,
+    renderScale: 1,
     audio: {
       source: 'demo',
       status: 'disconnected',

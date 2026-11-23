@@ -35,6 +35,26 @@ export const KIND_PRESETS: Record<SceneKind, ParamValues> = {
     glitch: 0.12, fbAmount: 0.5, fbRotate: 0.3, hue: 0.9, saturation: 1.4,
     colorCycle: 0.45, contrast: 1.35, irisMorph: 0.8,
   }),
+  cosmos: P({
+    eyeSize: 0.95, tentacles: 0, fractal: 0, sfAmount: 0, partAmount: 0, liquid: 0,
+    fbAmount: 0, glitch: 0, glow: 0.12, glowThreshold: 0.85, contrast: 1, saturation: 1.05,
+    opPart: 0, opTent: 0, opGeo: 0, // clean template: audio can't sneak these layers in
+    hue: 0, colorCycle: 0, rotSpeed: 0, rotTwist: 0, pulse: 0.1,
+    imgMix: 1, imgZoom: 1, imgWarp: 0, imgEdge: 0, imgSoft: 0.55, imgSpin: 0,
+    impShake: 0.12, impRipple: 0.2, impCrack: 0, impFlash: 0.04,
+    starBright: 1, starDensity: 0.55, starSize: 0.4, starTwinkle: 0.55, starDrift: 0.08,
+    shootRate: 0.35, shootSpeed: 0.5, shootLength: 0.5, nebula: 0.22,
+  }),
+};
+
+/** Bundled template images live in /public and use the `asset:` id prefix. */
+export const COSMIC_EYE_ID = 's-cosmic';
+export const COSMIC_EYE: Scene = {
+  id: COSMIC_EYE_ID,
+  name: 'COSMIC EYE',
+  kind: 'cosmos',
+  params: KIND_PRESETS.cosmos,
+  image: { id: 'asset:/templates/cosmic-eye.jpg', mode: 'center', kind: 'image' },
 };
 
 export function uid(): string {
@@ -42,6 +62,7 @@ export function uid(): string {
 }
 
 export const INITIAL_SCENES: Scene[] = [
+  COSMIC_EYE,
   { id: 's-eye', name: 'THE EYE', kind: 'eye', params: KIND_PRESETS.eye },
   { id: 's-bloom', name: 'ORGANIC BLOOM', kind: 'bloom', params: KIND_PRESETS.bloom },
   { id: 's-tunnel', name: 'FRACTAL TUNNEL', kind: 'tunnel', params: KIND_PRESETS.tunnel },

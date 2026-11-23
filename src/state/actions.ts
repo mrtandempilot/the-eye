@@ -1,7 +1,7 @@
 import { clampParam, PARAM_BY_KEY } from '@/engine/params';
-import { KIND_PRESETS, uid } from '@/engine/presets';
+import { COSMIC_EYE, KIND_PRESETS, uid } from '@/engine/presets';
 import { SCENE_KINDS, type ImageMode, type Scene, type SceneImage, type SceneKind, type TransitionType, type VideoPlay } from '@/engine/types';
-import { deleteImage, fileToDataUrl, getImage, MAX_VIDEO_BYTES, posterKey, putImage, videoPoster } from '@/lib/imageStore';
+import { deleteImage, fileToDataUrl, getImage, MAX_VIDEO_BYTES, posterKey, putImage, toDataUrl, videoPoster } from '@/lib/imageStore';
 import { live, store, type AppState, type AudioChannelCfg, type MidiMapping } from './appState';
 
 /* ------------------------------------------------------------------ events
@@ -219,8 +219,9 @@ export async function aiTune(sceneId: string, hint?: string) {
   if (!sc?.image || S().aiBusy.includes(sceneId)) return;
   store.set((s) => ({ aiBusy: [...s.aiBusy, sceneId], aiError: null }));
   try {
-    const image = await getImage(sc.image.kind === 'video' ? posterKey(sc.image.id) : sc.image.id);
-    if (typeof image !== 'string') throw new Error('Image not found in this browser.');
+    const src = await getImage(sc.image.kind === 'video' ? posterKey(sc.image.id) : sc.image.id);
+    if (typeof src !== 'string') throw new Error('Image not found in this browser.');
+    const image = await toDataUrl(src);
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -418,11 +419,22 @@ export function loadPersisted() {
     const d = JSON.parse(raw);
     const s = S();
     const scenes: Scene[] = Array.isArray(d.scenes) && d.scenes.length >= 2 ? d.scenes : s.scenes;
+    // one-time: add new bundled templates to saved sets and put the main one on air
+    const seen: string[] = Array.isArray(d.templates) ? d.templates : [];
+    let putOnAir: string | null = null;
+    if (!seen.includes(COSMIC_EYE.id)) {
+      if (!scenes.some((x) => x.id === COSMIC_EYE.id)) scenes.unshift({ ...COSMIC_EYE, params: { ...COSMIC_EYE.params } });
+      putOnAir = COSMIC_EYE.id;
+    }
     const has = (id: string) => scenes.some((x) => x.id === id);
     store.set({
       scenes: scenes.map((x) => ({ ...x, params: { ...KIND_PRESETS[x.kind], ...x.params } })),
-      slotA: has(d.slotA) ? d.slotA : scenes[0].id,
-      slotB: has(d.slotB) && d.slotB !== d.slotA ? d.slotB : scenes[1].id,
+      slotA: putOnAir ?? (has(d.slotA) ? d.slotA : scenes[0].id),
+      slotB: (() => {
+        const a = putOnAir ?? (has(d.slotA) ? d.slotA : scenes[0].id);
+        const b = has(d.slotB) ? d.slotB : scenes[1].id;
+        return b !== a ? b : scenes.find((x) => x.id !== a)!.id;
+      })(),
       transition: { ...s.transition, ...(d.transition || {}) },
       bpm: typeof d.bpm === 'number' ? d.bpm : s.bpm,
       renderScale: typeof d.renderScale === 'number' ? d.renderScale : s.renderScale,
@@ -454,6 +466,7 @@ export function startPersistence() {
         const st = store.get();
         localStorage.setItem(KEY, JSON.stringify({
           scenes: st.scenes, slotA: st.slotA, slotB: st.slotB, transition: st.transition,
+          templates: [COSMIC_EYE.id],
           bpm: st.bpm, renderScale: st.renderScale,
           audio: { reactivity: st.audio.reactivity, channels: st.audio.channels },
           midi: { mappings: st.midi.mappings },

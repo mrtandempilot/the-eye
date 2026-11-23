@@ -27,7 +27,15 @@ async function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBReq
 export type StoredMedia = string | Blob;
 
 export const putImage = (id: string, data: StoredMedia) => tx('readwrite', (s) => s.put(data, id));
-export const getImage = (id: string) => tx<StoredMedia | undefined>('readonly', (s) => s.get(id));
+/** `asset:/path` ids point at bundled files in /public (templates). */
+export const getImage = (id: string): Promise<StoredMedia | undefined> =>
+  id.startsWith('asset:') ? Promise.resolve(id.slice(6)) : tx<StoredMedia | undefined>('readonly', (s) => s.get(id));
+
+/** Any image source (data URL or same-origin path) → data URL. */
+export async function toDataUrl(src: string): Promise<string> {
+  if (src.startsWith('data:')) return src;
+  return fileToDataUrl(await (await fetch(src)).blob());
+}
 export const posterKey = (id: string) => id + ':poster';
 
 export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
@@ -67,12 +75,13 @@ export async function videoPoster(blob: Blob, max = 1280): Promise<string> {
   }
 }
 export const deleteImage = async (id: string) => {
+  if (id.startsWith('asset:')) return;
   await tx('readwrite', (s) => s.delete(id));
   await tx('readwrite', (s) => s.delete(posterKey(id)));
 };
 
 /** Downscale a user image to a JPEG data URL (long edge ≤ max). */
-export async function fileToDataUrl(file: Blob, max = 1280, quality = 0.88): Promise<string> {
+export async function fileToDataUrl(file: Blob, max = 2048, quality = 0.92): Promise<string> {
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const w = Math.max(1, Math.round(bmp.width * k));

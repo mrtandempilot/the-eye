@@ -24,6 +24,18 @@ npm run bridge     # optional: WebSocket ⇄ OSC bridge for TouchDesigner / Able
 | Audio in `DEMO` mode | **Simulated** from the BPM clock, and labelled SIMULATED throughout the UI. |
 | TouchDesigner | **Real** WebSocket client. It shows DISCONNECTED and the **DEMO MODE** badge until a server answers. |
 
+## COSMIC EYE template
+
+The main template scene, **COSMIC EYE**, puts the bundled image
+`public/templates/cosmic-eye.jpg` in the centre. The image is pin-sharp, with
+no warp or feedback, and a soft edge blends it into a procedural starfield.
+
+The **Stars & Shooting Stars** group adjusts the stars: brightness, density,
+size, twinkle, drift, how often shooting stars appear, their speed and trail
+length, and a faint nebula haze. The starfield can be switched on in any
+scene. COSMIC EYE is added to saved sets once and put on air. Bundled images
+use `asset:` ids, so they are never stored in or deleted from IndexedDB.
+
 ## Video clips and kick impact
 
 - **Video:** the same **✦ From image / video (AI)** entry also takes MP4 or
