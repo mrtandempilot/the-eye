@@ -20,7 +20,8 @@ export type ParamGroupId =
   | 'video'
   | 'opacity'
   | 'impact'
-  | 'stars';
+  | 'stars'
+  | 'cosmic';
 
 export interface ParamDef {
   key: string;
@@ -50,6 +51,7 @@ export const PARAM_GROUPS: { id: ParamGroupId; label: string; short: string }[] 
   { id: 'opacity', label: 'Layer Opacity', short: 'OPA' },
   { id: 'impact', label: 'Kick Impact (glass hit)', short: 'HIT' },
   { id: 'stars', label: 'Stars & Shooting Stars', short: 'STR' },
+  { id: 'cosmic', label: 'Cosmic Particles (3D)', short: 'CPX' },
 ];
 
 export const PARAMS: ParamDef[] = [
@@ -133,6 +135,18 @@ export const PARAMS: ParamDef[] = [
   { key: 'shootSpeed', label: 'Shooting Speed', group: 'stars', min: 0, max: 1, def: 0.5 },
   { key: 'shootLength', label: 'Trail Length', group: 'stars', min: 0, max: 1, def: 0.5 },
   { key: 'nebula', label: 'Nebula Haze', group: 'stars', min: 0, max: 1, def: 0.3 },
+  // 3D GPU particle cloud (curl-noise flow around a shell)
+  { key: 'cpAmount', label: 'Brightness', group: 'cosmic', min: 0, max: 2, def: 0 },
+  { key: 'cpDensity', label: 'Density', group: 'cosmic', min: 0, max: 1, def: 0.6 },
+  { key: 'cpSpeed', label: 'Flow Speed', group: 'cosmic', min: 0, max: 1, def: 0.4 },
+  { key: 'cpTurb', label: 'Turbulence', group: 'cosmic', min: 0, max: 1, def: 0.5 },
+  { key: 'cpRadius', label: 'Radius', group: 'cosmic', min: 0.3, max: 2, def: 1.1, step: 0.01 },
+  { key: 'cpSwirl', label: 'Swirl', group: 'cosmic', min: -1, max: 1, def: 0.3 },
+  { key: 'cpTrail', label: 'Trail', group: 'cosmic', min: 0, max: 1, def: 0.4 },
+  { key: 'cpBurst', label: 'Kick Burst', group: 'cosmic', min: 0, max: 1, def: 0.4 },
+  { key: 'cpWarm', label: 'Warm Embers', group: 'cosmic', min: 0, max: 1, def: 0.3 },
+  { key: 'cpOrbit', label: 'Camera Orbit', group: 'cosmic', min: -1, max: 1, def: 0.2 },
+  { key: 'cpTilt', label: 'Camera Tilt', group: 'cosmic', min: -1, max: 1, def: 0.25 },
 ];
 
 export type ParamKey = (typeof PARAMS)[number]['key'];

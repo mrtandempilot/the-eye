@@ -44,6 +44,8 @@ export const KIND_PRESETS: Record<SceneKind, ParamValues> = {
     impShake: 0.12, impRipple: 0.2, impCrack: 0, impFlash: 0.04,
     starBright: 1, starDensity: 0.55, starSize: 0.4, starTwinkle: 0.55, starDrift: 0.08,
     shootRate: 0.35, shootSpeed: 0.5, shootLength: 0.5, nebula: 0.22,
+    cpAmount: 0.5, cpDensity: 0.55, cpSpeed: 0.35, cpTurb: 0.55, cpRadius: 1.15, cpSwirl: 0.25,
+    cpTrail: 0.45, cpBurst: 0.35, cpWarm: 0.4, cpOrbit: 0.15, cpTilt: 0.25,
   }),
 };
 

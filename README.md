@@ -36,6 +36,21 @@ length, and a faint nebula haze. The starfield can be switched on in any
 scene. COSMIC EYE is added to saved sets once and put on air. Bundled images
 use `asset:` ids, so they are never stored in or deleted from IndexedDB.
 
+## Cosmic particles (3D)
+
+The engine runs a GPU particle simulation: 65k, 147k or 262k particles at
+LO/MID/HI quality. It needs `EXT_color_buffer_float`; without it the layer is
+skipped.
+
+Particles move through a 3D curl-noise flow field around a spherical shell
+and burst outward on every kick. They are drawn as 1-pixel streaks with
+additive blending from a slowly orbiting perspective camera. Particles behind
+the centre disc are dimmed, so the cloud wraps around the eye or image in 3D.
+
+The **Cosmic Particles (3D)** group adjusts brightness, density, flow speed,
+turbulence, radius, swirl, trail, kick burst, warm embers, camera orbit and
+tilt. The layer is on in COSMIC EYE and off (brightness 0) elsewhere.
+
 ## Video clips and kick impact
 
 - **Video:** the same **✦ From image / video (AI)** entry also takes MP4 or

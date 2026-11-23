@@ -7,6 +7,7 @@ import {
   TRANSITION_FRAG,
   VERT,
 } from './shaders';
+import { CosmicParticles } from './particles';
 import { SCENE_KINDS, TRANSITIONS, type EngineFrame, type ImpactState, type SceneRender } from './types';
 
 /**
@@ -59,6 +60,7 @@ export class VisualEngine {
   private thumbOut: Target;
   private black: Target;
   private paramBuf = new Float32Array(PARAMS.length);
+  private particles: CosmicParticles | null = null;
   private images = new Map<string, { tex: WebGLTexture; aspect: number; video?: HTMLVideoElement; uploaded?: number }>();
   private pixelBuf = new Uint8Array(MON_W * MON_H * 4);
   private floatFb: boolean;
@@ -117,6 +119,11 @@ export class VisualEngine {
       'uHit', 'uHitAge', 'uHitPos', 'uHitSeed', 'uShake', 'uRipple', 'uCrack', 'uFlash',
     ]);
     this.blit = this.program(BLIT_FRAG, ['uSrc']);
+    try {
+      this.particles = new CosmicParticles(gl, this.vao, (v, f) => this.link(v, f));
+    } catch (e) {
+      console.warn('Cosmic particles disabled:', e);
+    }
 
     this.monA = this.target(MON_W, MON_H);
     this.monB = this.target(MON_W, MON_H, true);
@@ -129,29 +136,34 @@ export class VisualEngine {
   }
 
   // ------------------------------------------------------------------ setup
-  private program(frag: string, uniforms: string[]): Prog {
+  private link(vert: string, frag: string): WebGLProgram {
     const gl = this.gl;
     const compile = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        const log = gl.getShaderInfoLog(s);
-        gl.deleteShader(s);
+      const sh = gl.createShader(type)!;
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        const log = gl.getShaderInfoLog(sh);
+        gl.deleteShader(sh);
         throw new Error('Shader compile error: ' + log);
       }
-      return s;
+      return sh;
     };
     const p = gl.createProgram()!;
-    gl.attachShader(p, compile(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vert));
     gl.attachShader(p, compile(gl.FRAGMENT_SHADER, frag));
     gl.bindAttribLocation(p, 0, 'aPos');
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
       throw new Error('Program link error: ' + gl.getProgramInfoLog(p));
     }
+    return p;
+  }
+
+  private program(frag: string, uniforms: string[]): Prog {
+    const p = this.link(VERT, frag);
     const u: Uniforms = {};
-    for (const n of uniforms) u[n] = gl.getUniformLocation(p, n === 'uP' ? 'uP[0]' : n);
+    for (const n of uniforms) u[n] = this.gl.getUniformLocation(p, n === 'uP' ? 'uP[0]' : n);
     return { p, u };
   }
 
@@ -313,6 +325,19 @@ export class VisualEngine {
     this.images.delete(id);
   }
 
+  /** centre disc (eye or centred image) in screen-height units, for particle occlusion */
+  private disc(s: SceneRender) {
+    const p = s.params;
+    const hasCentre = (p.eyeSize ?? 0) > 0.01 || s.image?.mode === 'center';
+    return hasCentre ? 0.06 + 0.36 * (p.eyeSize ?? 0) : 0;
+  }
+
+  private drawParticles(s: SceneRender, dst: Target) {
+    if (!this.particles || (s.params.cpAmount ?? 0) <= 0.001) return;
+    this.particles.render(dst.fb, dst.w, dst.h, { params: s.params, disc: this.disc(s) });
+    this.gl.bindVertexArray(this.vao);
+  }
+
   private renderPost(src: Target, prev: Target, dst: Target, params: Record<string, number>, time: number) {
     const gl = this.gl;
     const { p, u } = this.post;
@@ -418,9 +443,20 @@ export class VisualEngine {
     const prev = this.tFb[1 - this.fbIdx];
 
     if (!f.freeze) {
-      this.renderScene(f.a, f.time, f.pulse, this.tA);
       const mixing = !!f.b && f.mix > 0.0005;
-      if (mixing && f.b) this.renderScene(f.b, f.time, f.pulse, this.tB);
+      // one shared particle simulation, driven by whichever scene dominates
+      const lead = mixing && f.b && f.mix > 0.5 ? f.b : f.a;
+      const wantParticles = (f.a.params.cpAmount ?? 0) > 0.001 || (mixing && (f.b?.params.cpAmount ?? 0) > 0.001);
+      if (this.particles && wantParticles) {
+        this.particles.step(f.time, f.impact?.hit ?? f.pulse, lead.params, f.renderScale);
+        gl.bindVertexArray(this.vao);
+      }
+      this.renderScene(f.a, f.time, f.pulse, this.tA);
+      this.drawParticles(f.a, this.tA);
+      if (mixing && f.b) {
+        this.renderScene(f.b, f.time, f.pulse, this.tB);
+        this.drawParticles(f.b, this.tB);
+      }
 
       // transition (also acts as plain copy when not mixing)
       const { p, u } = this.trans;
