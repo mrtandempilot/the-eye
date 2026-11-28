@@ -1,272 +1,84 @@
-# THE EYE — Complete Knowledge Base (single file)
+# THE EYE — TouchDesigner Knowledge Base
 
-All sections in one document. Sections: README & instructions · Project brief · Web app architecture · Visual techniques · TouchDesigner guide · Scene recipes · Audio/MIDI/Ableton · References.
+Single reference for building **THE EYE** visuals in **TouchDesigner** with Claude Desktop
++ the TouchDesigner MCP. (This file is only about the visuals and TouchDesigner — the separate
+web dashboard is intentionally left out.)
 
+## How to use (Claude Desktop)
 
----
+1. Create a Project in Claude Desktop (e.g. "THE EYE") and add this file to its knowledge.
+2. Paste the block below into the project's custom instructions.
+3. Make sure the TouchDesigner MCP is connected and TouchDesigner is running.
+4. Ask e.g.: *"Build the COSMIC EYE network in TouchDesigner (section 'The COSMIC EYE network')
+   and show me a screenshot of OUT."*
 
-<!-- source: 00-README.md -->
-
-## THE EYE: knowledge base
-
-These files cover everything decided and learned so far on **THE EYE**, a
-generative audiovisual performance project. They are written for a Claude
-Desktop project that has the **TouchDesigner MCP** connected, so Claude can
-build the visuals directly in TouchDesigner on the artist's computer.
-
-### How to use (Claude Desktop)
-
-1. Create a new Project in Claude Desktop, for example "THE EYE".
-2. Add every `.md` file in this folder to the project's knowledge.
-3. Paste the "Project instructions" block below into the project's custom
-   instructions.
-4. Make sure the TouchDesigner MCP is connected (in Claude Desktop settings
-   under Connectors / MCP) and that TouchDesigner is running.
-5. In chat, ask for example: "Build the COSMIC EYE network in TouchDesigner
-   following 03-touchdesigner-guide.md."
-
-#### Project instructions (paste into Claude Desktop)
+### Project instructions (paste into Claude Desktop)
 
 ```
 You are helping a Turkish-speaking generative audiovisual artist build THE EYE,
-a live visual performance system. Always answer in Turkish, simply and briefly.
-The artist is not a programmer: explain what to click, never assume coding
-knowledge. Use the TouchDesigner MCP tools to build and check networks
-yourself, then take a screenshot of the output TOP before saying it works.
-Read 00-project-brief.md first, then the guide that matches the task.
-Never invent operator parameter names: check them with the TouchDesigner
-documentation tools (td_doc_read / td_doc_search) before setting them.
-Report honestly what you could and could not verify.
+a live visual performance in TouchDesigner. Always answer in Turkish, simply and
+briefly. The artist is not a programmer: explain what to click, never assume
+coding knowledge. Use the TouchDesigner MCP tools to build and check networks
+yourself, and take a screenshot of the output TOP before saying it works.
+Never invent operator parameter names: check them with td_doc_read / td_doc_search
+before setting them. Report honestly what you could and could not verify.
 ```
 
-### Files
-
-| File | Contents |
-|---|---|
-| `00-project-brief.md` | Vision, aesthetic, the artist's preferences, current status, open issues |
-| `01-web-app-architecture.md` | The existing web dashboard (Next.js): structure, parameters, protocol |
-| `02-visual-techniques.md` | Every visual technique, with how it works and the key formulas |
-| `03-touchdesigner-guide.md` | TouchDesigner essentials, GLSL TOP rules, the COSMIC EYE network, next builds |
-| `04-scene-recipes.md` | Concrete looks the artist wants, step by step |
-| `05-audio-midi-ableton.md` | Kick detection, frequency bands, MIDI, Ableton, OSC/WebSocket protocol |
-| `06-references.md` | Wikipedia articles, papers and YouTube examples |
-
-The code lives in the GitHub repository `mrtandempilot/the-eye`. The newest
-work is on branch `claude/image-ai-scenes`. The TouchDesigner builder script is
-`touchdesigner/build_cosmic_eye.py`, and the main template image is
-`public/templates/cosmic-eye.jpg`.
+Supporting files (in the `the-eye` repository, `touchdesigner/` and `public/templates/`):
+`build_cosmic_eye.py` (builds the COSMIC EYE network) and `cosmic-eye.jpg` (main template image).
 
 
 ---
 
-<!-- source: 00-project-brief.md -->
-
-## Project brief: THE EYE
+## Project brief
 
 ### The artist and the goal
-
-- The artist is a Turkish-speaking generative audiovisual performer. They want
-  answers in Turkish, short and practical. They are not a programmer, so give
-  click-by-click steps.
-- THE EYE is **a musical instrument for generative visuals**, not an admin
-  dashboard. It is played live with music from Ableton Live, with MIDI
-  controllers and projectors.
-- Central motif: a **surreal, hyper-real eye** surrounded by living,
-  procedural matter: tentacles, superformula geometry, fractals, liquid
-  distortion, particles, feedback and glitch.
+- Turkish-speaking generative audiovisual performer. Wants answers in **Turkish**, short and practical,
+  click-by-click (not a programmer).
+- THE EYE is **a musical instrument for generative visuals**, played live with music from **Ableton Live**,
+  MIDI controllers and projectors.
+- Central motif: a **surreal eye** surrounded by living procedural matter — tentacles, superformula geometry,
+  fractals, liquid distortion, particles, feedback, glitch.
 
 ### Aesthetic
-
-- Dark black and charcoal, with **purple, electric blue and subtle cyan**
-  accents. Cinematic, minimal and futuristic, in the spirit of VJ software and
-  TouchDesigner installations.
-- **Extreme sharpness.** The artist said "çok net", meaning very crisp. They
-  were blown away by a live visual that was:
-  - **as thin as capillaries** ("kılcal damar kadar ince"): hair-thin
-    filaments made of single-pixel lines;
-  - **3D-looking**, with depth, wrap-around and parallax;
-  - **like a living organism**: it grows, breathes and flows.
-  The most likely techniques are a physarum simulation, curl-noise particle
-  flow with trails, and additive blending at high resolution. See
-  `02-visual-techniques.md`.
-- Things they liked:
-  - the **COSMIC EYE** image: a nebula or supernova shaped like an eye, orange
-    core and violet-blue shell, on a starfield. This is the **main template**;
-  - **stars** in the background, with **occasional shooting stars**, all
-    adjustable;
-  - **"Cosmic Particles"** (TouchDesigner tutorial TD Drop #27), the style
-    they chose;
-  - a visual where, on every **kick**, something **hits glass**;
-  - a **dark mountain with light flowing down it like a waterfall of white
-    stars**, going from rock to rock;
-  - a **robot** character (dancing, or hitting glass) is fine instead of a real
-    person.
+- Dark black/charcoal with **purple, electric blue and subtle cyan** accents; cinematic, minimal, futuristic.
+- **Extreme sharpness** ("çok net"). The artist was blown away by a live visual that was:
+  - **as thin as capillaries** ("kılcal damar kadar ince") — hair-thin, single-pixel filaments;
+  - **3D-looking** — depth, wrap-around, parallax;
+  - **like a living organism** — growing, breathing, flowing.
+  → most likely physarum simulation and/or curl-noise particle flow with trails, additive blending at high
+  resolution (see Visual techniques).
+- Liked / wants:
+  - the **COSMIC EYE** image (eye-shaped nebula: orange core, violet-blue shell, starfield) — the **main template**;
+  - **stars** in the background with **occasional shooting stars**, all adjustable;
+  - the **"Cosmic Particles"** style (TouchDesigner tutorial *TD Drop #27*);
+  - on every **kick**, something **hits glass**;
+  - a **dark mountain with light flowing down like a waterfall of white stars**, rock to rock;
+  - a **robot** character (dancing or hitting glass) is fine instead of a real person.
 
 ### The main template: COSMIC EYE
+- `cosmic-eye.jpg` in the centre: **pin-sharp** (no warp/feedback on the image), soft circular edge blending
+  into the starfield.
+- Background: crisp point stars (some with 4-point diffraction spikes), twinkle, slow drift, occasional
+  shooting stars, faint violet-blue nebula haze — all adjustable.
+- Around the image: thin flowing "cosmic threads" / a 3D particle cloud; kick → outward burst + light shake +
+  shockwave (optional glass cracks, flash).
 
-- The image `public/templates/cosmic-eye.jpg` sits in the centre. It must stay
-  pin-sharp, with no warp or feedback on the image itself, and a soft circular
-  edge blends it into the starfield.
-- Background: crisp point stars, some with four-point diffraction spikes,
-  twinkling, slow drift, occasional shooting stars and a faint violet-blue
-  nebula haze. Every part is adjustable.
-- Around the image: thin flowing "cosmic threads" or a 3D particle cloud. Kick
-  makes them burst outward. On the kick there is also a light shake and a
-  shockwave, and optionally glass cracks and a flash.
+### Status
+- `build_cosmic_eye.py` builds the COSMIC EYE network in TouchDesigner. Its GLSL was compile-checked, but it
+  has **not been run inside TouchDesigner yet** → first task: run it, check `td_logs`, fix any
+  parameter-name warnings, screenshot `OUT`.
+- Nothing tested on real hardware yet (GPU, MIDI controller, Ableton, projector).
 
-### Current status (late November 2026)
-
-- **Web dashboard** (Next.js, repository `mrtandempilot/the-eye`):
-  - `main` is deployed on Vercel. It has the eye engine, 7 scenes, 7
-    transitions, the effect panel, audio, MIDI, the TouchDesigner WebSocket
-    link and the output window.
-  - Branch `claude/image-ai-scenes` adds:
-    - image and video scenes, with play modes loop / on-kick / on-beat;
-    - AI scene tuning: the `/api/analyze` route sends the image to OpenRouter
-      (default model `anthropic/claude-haiku-5.5`), or to the Anthropic API;
-    - per-layer opacity;
-    - the Kick Impact glass-hit effect;
-    - the COSMIC EYE template with starfield and shooting stars;
-    - the 3D GPU cosmic particle cloud.
-  - The branch preview URL is
-    `https://the-eye-git-claude-image-ai-scenes-mrtandempilots-projects.vercel.app`.
-  - It is not merged to `main` yet.
-- **TouchDesigner**:
-  - `touchdesigner/build_cosmic_eye.py` builds the COSMIC EYE network (see
-    `03-touchdesigner-guide.md`). Its GLSL was compile-checked but it has not
-    been run inside TouchDesigner yet.
-  - `touchdesigner/eye_webserver_callbacks.py` and `eye_osc_callbacks.py` link
-    TouchDesigner with the web dashboard.
-
-### Open issues
-
-1. **AI key on Vercel:** `/api/analyze` returned "No AI key on the server" on
-   the preview. Most likely `OPENROUTER_API_KEY` was set for Production only and
-   not for Preview. The error message now also shows which environment it ran
-   in and which key names the server can see.
-2. **Testing:** nothing has been tested on real hardware yet: MIDI controller,
-   a real GPU, Ableton, a projector.
-3. **Missing:** export and import of scene sets to a file. This matters before
-   a show, because scenes live only in browser storage.
-4. **TouchDesigner:** run the builder script, fix any parameter-name warnings,
-   then go further with physarum, 3D particles (POPs) and the star waterfall.
-
-### Working rules learned so far
-
-- Never fake an integration. If something is not connected, say
-  DISCONNECTED and use a clearly labelled simulated or demo mode.
-- Do not put API keys in code or in git. Use environment variables.
-- Get the user's consent before spending credits (for example on AI video
-  generation).
-- When asked for something only partly possible, say so plainly and offer
-  the realistic path.
-
+### Working rules
+- Never fake an integration — if something is not connected, say so.
+- Never put API keys in files or git.
+- Ask before spending credits (e.g. AI video generation).
+- If something is only partly possible, say so plainly and offer the realistic path.
 
 ---
 
-<!-- source: 01-web-app-architecture.md -->
-
-## The web dashboard: architecture
-
-Repository: `mrtandempilot/the-eye`. It uses Next.js 15 (App Router),
-TypeScript and Tailwind 4. Run it locally with `npm install && npm run dev`,
-then open http://localhost:3100.
-
-### Principle
-
-The UI never draws pixels, and the visual engine never reads UI state.
-
-1. Each frame, a **runtime** (`src/state/runtime.ts`) builds a serialisable
-   `EngineFrame`. That frame holds scene A, scene B, the crossfade mix, the
-   transition type, the master level, blackout, freeze, the kick impact
-   state, and the modulated parameters.
-2. The same frame goes to three places:
-   - the local WebGL2 engine (the preview);
-   - the `/output` pop-out window, through a `BroadcastChannel`;
-   - TouchDesigner, through WebSocket as JSON at about 30 Hz.
-
-### Folders
-
-```
-src/engine/     WebGL2 engine (no React)
-  params.ts       parameter list. ORDER = shader uniform layout; append only
-  shaders.ts      GLSL: scene generator, 7 transitions, post (glow/feedback/glitch), output (tone map + kick impact)
-  particles.ts    3D GPU particle cloud (float-texture ping-pong, curl noise, 1-px additive streaks)
-  VisualEngine.ts render passes, A/B monitors, thumbnails, image/video textures
-  presets.ts      scene presets incl. COSMIC EYE template
-  types.ts        EngineFrame, Scene, SceneImage (image or video), transitions
-src/state/      store, actions (scene CRUD, A/B transition machine, persistence), controls (MIDI/OSC targets), runtime
-src/io/         midi.ts (Web MIDI + clock), audio.ts (demo / interface FFT / bridge levels), bridge.ts (TD WebSocket), protocol.ts
-src/components/ panels: TopBar, ScenePanel, PreviewStage, TransitionPanel, EffectsPanel, ImageControls, AudioPanel, PerformancePanel
-src/app/api/analyze/route.ts   AI scene tuning (OpenRouter or Anthropic)
-bridge/eye-bridge.mjs          WebSocket ⇄ OSC bridge (Node)
-touchdesigner/                 TD scripts (builder + callbacks)
-```
-
-### Render pipeline (per frame)
-
-1. Scene A, then scene B if mixing. A full-screen fragment shader draws each
-   scene: background generator, starfield, fractal, superformula rings,
-   particles, tentacles, eye or image layer, colour grade. When enabled, the
-   3D particle cloud is drawn additively on top.
-2. **Transition** shader: morph, liquid, dissolve, feedback, glitch, tunnel or
-   particle explosion.
-3. **Post**: glitch, glow (from a mip chain) and feedback (zoom and rotate the
-   previous frame).
-4. **Output**: kick impact (shake, shockwave, glass cracks, flash), master,
-   ACES tone map, vignette, grain, blackout. The impact is drawn here so it
-   stays out of the feedback loop.
-
-### Parameter groups (all MIDI-mappable and audio-modulatable)
-
-- **Eye** geometry: size, aperture, veins, gaze motion.
-- **Iris**: morph, fiber detail, pupil, spin.
-- **Organic**: tentacles, length, curl, fractal.
-- **Superformula**: amount, m, n1, n2, n3.
-- **Particles** (2D): density, speed, size.
-- **Distortion**: liquid, warp scale, flow speed.
-- **Feedback**: amount, zoom, rotate, glitch.
-- **Color**: hue, saturation, contrast, cycle.
-- **Glow**: glow, threshold.
-- **Rotation**: speed, twist.
-- **Scale**: zoom, beat pulse.
-- **Image layer**: mix, zoom, warp, edge morph, edge softness, spin.
-- **Video**: speed, cue point.
-- **Layer opacity**: background, eye, tentacles, geometry, particles.
-- **Kick impact**: shake, shockwave, glass cracks, flash.
-- **Stars**: brightness, density, size, twinkle, drift, shooting-star rate,
-  speed, trail, nebula.
-- **Cosmic particles 3D**: brightness, density, flow speed, turbulence,
-  radius, swirl, trail, kick burst, warm embers, camera orbit, tilt.
-
-### Scenes and media
-
-- A scene is `{id, name, kind, params, image?}`.
-- `kind` is one of: eye, bloom, tunnel, liquid, geometric, particles,
-  abstract, cosmos.
-- `image` can be an image or a video:
-  - mode: center or background;
-  - video play mode: loop, kick or beat.
-- Media is stored in IndexedDB. Bundled templates use `asset:/path` ids.
-
-### AI scene tuning
-
-`POST /api/analyze` takes `{image: dataURL, hint?}`. The model returns
-structured JSON: name, kind, imageMode, every parameter, and a short note in
-Turkish.
-
-- If `OPENROUTER_API_KEY` is set, it calls OpenRouter
-  (`OPENROUTER_MODEL`, default `anthropic/claude-haiku-5.5`, about 0.1 cent
-  per image).
-- Otherwise it calls the Anthropic API (`ANTHROPIC_MODEL`, default
-  `claude-opus-5-5`).
-
-
----
-
-<!-- source: 02-visual-techniques.md -->
-
-## Visual techniques: what makes each look
+## Visual techniques
 
 Each section explains how a technique works and what it looks like. All of
 them run in real time on a GPU, as GLSL shaders, which work in TouchDesigner
@@ -380,7 +192,7 @@ This is the best guess for the "capillary-thin, living" visual the artist saw.
   multiplied by a value below 1. You get tunnels, echoes and smears.
 - This is TouchDesigner's signature trick (Feedback TOP).
 
-### 10. Stars and shooting stars (as built)
+### 10. Stars and shooting stars
 
 - Hash a grid of cells to place one star per cell, with a random chance of
   each cell having a star.
@@ -396,7 +208,7 @@ This is the best guess for the "capillary-thin, living" visual the artist saw.
     toward the tail, plus a glow at the head.
   - It fades in and out over its lifetime, and random cycles are skipped.
 
-### 11. Glass hit on kick (as built)
+### 11. Glass hit on kick
 
 - **Shake**: a random uv offset multiplied by a hit envelope that decays
   quickly (`exp(−9t)`).
@@ -435,14 +247,11 @@ This is the best guess for the "capillary-thin, living" visual the artist saw.
   - Unreal Niagara with distance-field collision;
   - Houdini for offline renders.
 
-
 ---
 
-<!-- source: 03-touchdesigner-guide.md -->
+## TouchDesigner guide
 
-## TouchDesigner guide for THE EYE
-
-### Basics (explain to the artist in plain Turkish)
+#### Basics (explain to the artist in plain Turkish)
 
 - **Operator families:**
   - **TOP**: images and textures (GPU). This is where the visuals are.
@@ -464,7 +273,7 @@ This is the best guess for the "capillary-thin, living" visual the artist saw.
 - Hardware: an NVIDIA RTX card is strongly recommended for millions of
   particles.
 
-### GLSL TOP rules (TouchDesigner dialect)
+#### GLSL TOP rules (TouchDesigner dialect)
 
 - Put the shader in a Text DAT and point the GLSL TOP's **Pixel Shader**
   parameter (`pixeldat`) at it.
@@ -486,7 +295,7 @@ This is the best guess for the "capillary-thin, living" visual the artist saw.
 - Before setting any parameter, check its exact name with
   `td_doc_read("GLSL_TOP")` and similar. Names can differ between builds.
 
-### Feedback loop pattern
+#### Feedback loop pattern
 
 ```
 constant(black) → feedbackTOP ──┐
@@ -497,7 +306,7 @@ flow (GLSL TOP) ← feedback, params ...   # reads the previous frame, writes th
 The Feedback TOP's `top` parameter points to the node whose output it feeds
 back. Its wired input is used for the first frame and resets.
 
-### Audio → kick chain
+#### Audio → kick chain
 
 ```
 audiodeviceinCHOP → audiofilterCHOP (low-pass ≈ 120 Hz) → analyzeCHOP (RMS power)
@@ -511,7 +320,7 @@ For sharp hits, detect onsets: fire when the value crosses about 0.55, and
 re-arm when it drops below about 0.3. A Trigger CHOP or a CHOP Execute DAT can
 do this.
 
-### The COSMIC EYE network (`touchdesigner/build_cosmic_eye.py`)
+#### The COSMIC EYE network (`touchdesigner/build_cosmic_eye.py`)
 
 Running the script in the Textport builds `/project1/cosmic_eye`:
 
@@ -540,7 +349,7 @@ TouchDesigner. It prints `THE EYE: could not set …` for any parameter name
 that differs and keeps going. **First task in Claude Desktop:** run it, read
 `td_logs`, fix the warnings, and take a screenshot of `OUT`.
 
-### Next builds (in order)
+#### Next builds (in order)
 
 1. **3D cosmic particles** (POPs or GLSL compute):
    - 1–4 million points in a curl-noise flow around a sphere shell;
@@ -557,14 +366,8 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
    - a heightmap from a photo (depth AI) or noise;
    - GPU particles sliding down the gradient, with additive white-blue points
      and trails.
-4. **Link to the web dashboard**:
-   - an **OSC In CHOP** on port 7000, fed by `npm run bridge` in the
-     repository, gives channels `eye/mix`, `eye/param/*`, `eye/audio/*`;
-   - or a **Web Server DAT** on port 9980 with
-     `touchdesigner/eye_webserver_callbacks.py`, so the dashboard's TAKE,
-     sliders and MIDI drive TouchDesigner.
 
-### Performance tips
+#### Performance tips
 
 - Keep resolution at 1920×1080 unless needed. Use 16-bit float buffers and
   avoid 32-bit except for particle state.
@@ -572,12 +375,9 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
 - Watch the Performance Monitor. Lower the particle count before lowering
   resolution, because sharpness matters most.
 
-
 ---
 
-<!-- source: 04-scene-recipes.md -->
-
-## Scene recipes the artist wants
+## Scene recipes
 
 ### 1. COSMIC EYE (main template)
 
@@ -611,9 +411,9 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
 
 - Kick Impact: shake, shockwave from a random point near the centre,
   Voronoi glass cracks that fade in about 1 s, and a short flash.
-- Video version: a clip of a robot or fist hitting glass, played in
-  ON KICK mode with the cue point just before the hit, so every kick restarts
-  the clip on the hit.
+- Video version: a clip of a robot or fist hitting glass in a Movie File In
+  TOP; on every kick, jump the playhead to a cue point just before the hit
+  (cue/trigger from the kick onset), so every kick lands on the hit.
 
 ### 4. Dancing robot
 
@@ -621,8 +421,8 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
   - Pexels "Futuristic Robot Dancing Under Neon Lights":
     https://www.pexels.com/video/futuristic-robot-dancing-under-neon-lights-29770096/
   - Pixabay "Robot, Dance, Fun": https://pixabay.com/videos/robot-dance-fun-168502/
-- Use it as a backdrop video, in ON BEAT mode, with glass cracks on the kick
-  and the eye floating in front.
+- Use it as a backdrop video, retriggered on the beat, with glass cracks on
+  the kick and the eye floating in front.
 
 ### 5. Star waterfall over a dark mountain
 
@@ -642,88 +442,42 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
 - Live: StreamDiffusion in TouchDesigner on a camera feed. It needs a strong
   NVIDIA GPU, and the look is dreamy rather than exact.
 
-
 ---
 
-<!-- source: 05-audio-midi-ableton.md -->
+## Audio, MIDI and Ableton
 
-## Audio, MIDI, Ableton and the protocol
-
-### Audio bands (used by the dashboard)
-
+### Audio bands
 | Band | Range | Typical target |
 |---|---|---|
-| Kick | 35–120 Hz | pupil size, impact, particle burst |
-| Bass | 60–250 Hz | tentacle curl, swirl |
+| Kick | 35–120 Hz | impact, particle burst, image pulse |
+| Bass | 60–250 Hz | swirl, curl |
 | Mid | 250–2000 Hz | liquid distortion |
 | High | 4–14 kHz | particle density, twinkle |
-| Synth / SH-4 | 300–3000 Hz, its own input channel | iris morph, threads |
+| Synth / SH-4 | 300–3000 Hz (own input channel) | thread brightness, morph |
 
-- Envelope: fast attack, slower release, to give a punchy but smooth result.
-- Kick onset: fire when the kick crosses about 0.55, and re-arm below about
-  0.3.
+- Envelope: fast attack, slower release (punchy but smooth).
+- Kick onset: fire when kick crosses ~0.55, re-arm below ~0.3 (Trigger CHOP or a CHOP Execute DAT).
+- In TouchDesigner: Audio Device In CHOP → Audio Filter CHOP (band) → Analyze CHOP (RMS power) → Lag CHOP →
+  Null CHOP; one chain per band. (Audio Spectrum CHOP is an alternative for many bands at once.)
 
-### Getting Ableton audio in
+### Getting Ableton audio into TouchDesigner
+- **Loopback / interface:** route Ableton's master (or a dedicated return for the Roland SH-4) to a loopback
+  device (BlackHole / Loopback / VB-Cable) or a multichannel interface, then use Audio Device In CHOP and
+  pick channels per band.
+- **OSC levels:** a Max for Live envelope follower sends e.g. `/eye/audio/kick 0.8` to TouchDesigner's
+  OSC In CHOP.
 
-- **Option A, loopback or interface.** Route Ableton's master, or a dedicated
-  return for the Roland SH-4, to a loopback device (BlackHole, Loopback,
-  VB-Cable) or to the inputs of a multichannel interface. In TouchDesigner use
-  an Audio Device In CHOP. In the dashboard, choose INPUT and pick a channel
-  per band.
-- **Option B, OSC levels.** A Max for Live envelope follower sends
-  `/eye/audio/kick 0.8` (or `/eye/audio k b m h s`) to the bridge on UDP 7001,
-  or straight to TouchDesigner's OSC In.
-
-### Tempo
-
-- Ableton → MIDI Clock: in Preferences → Link/Tempo/MIDI, turn on Clock for
-  the output port. The dashboard follows it (shown as `MIDI CLK`). In
-  TouchDesigner use a MIDI In CHOP or the beat CHOP.
-- Alternatively send OSC `/eye/bpm 128`.
-
-### MIDI
-
-- The dashboard has MIDI LEARN: click a control, then move a knob. CC values
-  map 0–1 to the parameter range; notes act as buttons.
-- Button targets: `btn:take`, `cut`, `blackout`, `freeze`, `random`, `prev`,
-  `next`, `tap`, `auto`, `hit`.
-- Continuous targets: `mix`, `master`, `trans.duration`, `trans.intensity`,
-  `audio.reactivity`, `param:<key>`.
-
-### WebSocket protocol (dashboard ↔ TouchDesigner or bridge, JSON)
-
-- Outbound:
-  - `hello` with the list of parameters;
-  - `frame` at about 30 Hz:
-    `{t, bpm, beat, mix, master, blackout, freeze, transition, a:{id,name,kind,params}, b, audio}`;
-  - `event` with name `take`, `cut`, `committed` or `hit`.
-- Inbound:
-  - `{type:'audio', levels:{kick,…}}`
-  - `{type:'control', target:'btn:take', value:1}`
-  - `{type:'bpm', bpm:128}`
-
-### OSC map (`npm run bridge -- --osc-out 127.0.0.1:7000 --osc-in 7001`)
-
-- Out to TouchDesigner (one bundle per frame):
-  - `/eye/mix`, `/eye/master`, `/eye/blackout`, `/eye/freeze`, `/eye/bpm`,
-    `/eye/beat`, `/eye/transition`;
-  - `/eye/scene/a`, `/eye/scene/a/kind`, `/eye/scene/b`;
-  - `/eye/param/<key>`, `/eye/audio/<band>`;
-  - `/eye/event/<name>`.
-- In from Ableton or TouchDesigner:
-  - `/eye/audio/<band> f`, `/eye/audio f f f f f`;
-  - `/eye/bpm f`;
-  - `/eye/control/btn/take 1`, `/eye/control/mix 0.5`,
-    `/eye/control/param/glow 0.8`.
-
+### Tempo and MIDI
+- Ableton → **MIDI Clock** (Preferences → Link/Tempo/MIDI → Clock on the output port); in TouchDesigner
+  read it with MIDI In CHOP / a beat CHOP. Ableton Link is also supported in TouchDesigner.
+- MIDI controllers: MIDI In CHOP (or MIDI In Map) → map CCs (0–1) to the custom parameters of the
+  component; notes as triggers (e.g. glass hit, next scene, blackout).
 
 ---
-
-<!-- source: 06-references.md -->
 
 ## References
 
-### Wikipedia (concepts)
+#### Wikipedia (concepts)
 
 - Superformula: https://en.wikipedia.org/wiki/Superformula
 - Perlin noise: https://en.wikipedia.org/wiki/Perlin_noise
@@ -747,7 +501,7 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
 - Video feedback: https://en.wikipedia.org/wiki/Video_feedback
 - VJing: https://en.wikipedia.org/wiki/VJing
 
-### Papers and articles
+#### Papers and articles
 
 - Robert Bridson, "Curl-Noise for Procedural Fluid Flow" (SIGGRAPH 2007).
 - Jeff Jones, "Characteristics of pattern formation and evolution in
@@ -759,7 +513,7 @@ that differs and keeps going. **First task in Claude Desktop:** run it, read
   https://iquilezles.org/articles/
 - TouchDesigner documentation: https://docs.derivative.ca/
 
-### YouTube examples (found by search; check that each still works)
+#### YouTube examples (found by search; check that each still works)
 
 Physarum or organism:
 - Slimemold (Physarum) GLSL simulation in TouchDesigner: https://www.youtube.com/watch?v=O3vVrvGdNE8
@@ -781,7 +535,7 @@ Waterfall and terrain:
 - Unreal Engine 5 Waterfall Tutorial: https://www.youtube.com/watch?v=414t3mf3ilc
 - Houdini to Niagara: https://www.youtube.com/watch?v=GAn1Za1MYW4
 
-### Free stock video
+#### Free stock video
 
 - Pexels robot videos: https://www.pexels.com/search/videos/robot/
 - Pixabay dancing robot videos: https://pixabay.com/videos/search/dancing%20robot/
